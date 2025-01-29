@@ -1,0 +1,22 @@
+name: Manual Test Run
+
+on:
+  workflow_dispatch:  # Allows manual execution
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Flask App
+        run: python app.py
