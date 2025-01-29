@@ -69,7 +69,7 @@ def schedule_bot():
 def worker():
     """Worker process that continuously checks for scheduled jobs and executes them."""
     print("🚀 Background Worker Started...")
-    
+
     while True:
         try:
             with open(JOB_FILE, "r") as file:
@@ -119,5 +119,5 @@ if __name__ == '__main__':
     worker_thread = threading.Thread(target=worker, daemon=True)
     worker_thread.start()
     print("🚀 Worker Thread Started!")
-    
+
     app.run(host="0.0.0.0", port=5000, debug=True)
