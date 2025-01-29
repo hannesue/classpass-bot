@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 import os
-import multiprocessing
+import threading
 import json
 import time
 from datetime import datetime
@@ -50,7 +50,7 @@ def schedule_bot():
         try:
             logs = json.load(file)
         except json.JSONDecodeError:
-            logs = []  # Reset logs if the file is corrupt
+            logs = []
 
         logs.append({
             "class_name": job["class_name"],
@@ -66,66 +66,6 @@ def schedule_bot():
 
     return "✅ Bot scheduled successfully!"
 
-@app.route('/logs', methods=['GET'])
-def view_logs():
-    password = request.args.get("password")
-
-    if password != PASSWORD:
-        return "<h2 style='color:red; text-align:center;'>❌ Access Denied: Invalid password!</h2>", 403
-
-    try:
-        with open(LOG_FILE, "r") as file:
-            logs = json.load(file)
-    except json.JSONDecodeError:
-        logs = []
-
-    html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Bot Logs</title>
-        <style>
-            body { font-family: Arial, sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; padding: 20px; }
-            .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); max-width: 600px; width: 100%; text-align: center; }
-            h2 { margin-bottom: 20px; color: #333; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            table, th, td { border: 1px solid #ddd; }
-            th, td { padding: 10px; text-align: center; }
-            th { background: #007BFF; color: white; }
-            tr:nth-child(even) { background: #f2f2f2; }
-            .back-button { display: inline-block; margin-top: 15px; padding: 10px 15px; background: #007BFF; color: white; text-decoration: none; border-radius: 5px; transition: 0.3s; }
-            .back-button:hover { background: #0056b3; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h2>📋 Scheduled Bots Log</h2>
-            <table>
-                <tr>
-                    <th>Class</th>
-                    <th>Class Time</th>
-                    <th>Scheduler</th>
-                    <th>Scheduled At</th>
-                </tr>"""
-    for log in logs:
-        html += f"""
-                <tr>
-                    <td>{log.get('class_name', 'Unknown')}</td>
-                    <td>{log.get('class_time', 'Unknown')}</td>
-                    <td>{log.get('email', 'No Email')}</td>
-                    <td>{log.get('timestamp', 'Unknown')}</td>
-                </tr>"""
-    html += """
-            </table>
-            <a class="back-button" href="/">⬅️ Back to Scheduler</a>
-        </div>
-    </body>
-    </html>
-    """
-    return html
-
 def start_bot():
     print("🔄 Background bot is now running...")
 
@@ -134,8 +74,8 @@ def start_bot():
             with open(JOB_FILE, "r") as file:
                 job = json.load(file)
 
-            if not job:
-                print("⏳ No job found, checking again in 60 seconds...")
+            if not job or "booking_time" not in job:
+                print("⏳ No valid job found, checking again in 60 seconds...")
                 time.sleep(60)
                 continue
 
@@ -181,9 +121,9 @@ def start_bot():
 
         time.sleep(60)
 
+# ✅ Ensure the bot process starts when the app starts
 if __name__ == '__main__':
-    bot_process = multiprocessing.Process(target=start_bot)
-    bot_process.daemon = True  
-    bot_process.start()  
-    print("🚀 Bot process started in the background!")
+    bot_thread = threading.Thread(target=start_bot, daemon=True)
+    bot_thread.start()
+    print("🚀 Bot thread started at app launch!")
     app.run(host="0.0.0.0", port=5000, debug=True)
