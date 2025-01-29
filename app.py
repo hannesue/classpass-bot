@@ -41,9 +41,12 @@ def schedule_bot():
     print("✅ Job scheduled successfully!")  # Log the job scheduling
 
     # Start the bot in a background thread
-    bot_thread = threading.Thread(target=start_bot)
-    bot_thread.daemon = True
-    bot_thread.start()
+import multiprocessing
+
+if __name__ == '__main__':
+    bot_process = multiprocessing.Process(target=start_bot)
+    bot_process.start()
+    app.run(host="0.0.0.0", port=5000, debug=True)
 
     return "✅ Bot scheduled successfully!"
 
