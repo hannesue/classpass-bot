@@ -32,13 +32,13 @@ jobs:
       - name: Start Flask App
         run: |
           python app.py &
-          sleep 10  # Allow Flask to start
+          sleep 15  # Ensure Flask fully starts
 
       - name: Start Ngrok Tunnel (Persistent Mode)
         run: |
           nohup ngrok http 5000 --log=ngrok.log > ngrok.out 2>&1 &
-          sleep 15  # Ensure Ngrok starts
-          cat ngrok.out  # Debugging logs
+          sleep 15  # Give Ngrok enough time to initialize
+          cat ngrok.out  # Print Ngrok logs for debugging
 
       - name: Confirm Ngrok is Running
         run: |
@@ -51,14 +51,18 @@ jobs:
 
       - name: Get Ngrok URL
         run: |
+          sleep 5  # Allow Ngrok to fully initialize
           NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
           if [[ -z "$NGROK_URL" || "$NGROK_URL" == "null" ]]; then
             echo "❌ Ngrok URL not found! Check logs above."
             exit 1
           fi
           echo "🔗 Ngrok Public URL: $NGROK_URL"
-          echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV  # Updated from deprecated set-output
+          echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV  # Save to environment
 
       - name: Test Access to Flask App
         run: |
           curl --fail "$NGROK_URL" || echo "❌ Failed to reach Flask app."
+          
+      - name: Keep Workflow Alive for Debugging
+        run: sleep 3600  # Keep the process running for 1 hour
