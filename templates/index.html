@@ -5,158 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClassPass Bot</title>
     <style>
-        /* Global Styles */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: #f4f4f4;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-            position: relative;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            color: #333;
-        }
-
-        label {
-            display: block;
-            font-size: 14px;
-            text-align: left;
-            margin: 10px 0 5px;
-            color: #555;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 15px;
-            background: #007BFF;
-            color: white;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background: #0056b3;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        /* Floating Log Button */
-        .log-link {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 14px;
-        }
-
-        .log-link a {
-            text-decoration: none;
-            color: #007BFF;
-            font-weight: bold;
-        }
-
-        .log-link a:hover {
-            color: #0056b3;
-        }
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .container { max-width: 400px; margin: auto; padding: 20px; }
+        input, button { width: 100%; padding: 10px; margin: 5px 0; }
+        #message { display: none; padding: 10px; margin-top: 10px; }
     </style>
-</head>
-<body>
-
-    <div class="container">
-        <div class="log-link">
-            <a href="#" onclick="requestLogs()">🔍 View Logs</a>
-        </div>
-        <h1>📅 ClassPass Bot Scheduler</h1>
-        <form id="botForm">
-            
-            <div class="form-group">
-                <label for="email">📧 Email:</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-
-            <div class="form-group">
-                <label for="password">🔑 Password:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-
-            <div class="form-group">
-                <label for="class_name">🏋️‍♂️ Class Name:</label>
-                <input type="text" id="class_name" name="class_name" required>
-            </div>
-
-            <div class="form-group">
-                <label for="class_time">⏰ Class Time:</label>
-                <input type="text" id="class_time" name="class_time" placeholder="e.g., 06:00 AM" required>
-            </div>
-
-            <div class="form-group">
-                <label for="booking_time">📅 Booking Time (Bot Activation):</label>
-                <input type="datetime-local" id="booking_time" name="booking_time" required>
-            </div>
-
-            <button type="submit">✅ Schedule Bot</button>
-        </form>
-    </div>
-
     <script>
-        document.getElementById("botForm").addEventListener("submit", function(event) {
-            event.preventDefault(); 
-
-            let formData = new FormData(this);
-
-            fetch("/schedule", {
-                method: "POST",
-                body: formData
-            }).then(response => response.text()).then(data => {
-                alert("✅ Bot scheduled successfully!"); 
-                document.getElementById("botForm").reset(); 
-            }).catch(error => {
-                alert("❌ Error scheduling bot. Please try again.");
-            });
-        });
-
-        function requestLogs() {
-            let password = prompt("Enter Password to View Logs:");
-            if (password !== null) {
-                window.location.href = "/logs?password=" + encodeURIComponent(password);
-            }
+        function scheduleBot(event) {
+            event.preventDefault();
+            let formData = new FormData(document.getElementById("scheduleForm"));
+            fetch("/schedule", { method: "POST", body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("message").innerText = data.message;
+                    document.getElementById("message").style.display = "block";
+                    document.getElementById("scheduleForm").reset();
+                });
         }
     </script>
-
+</head>
+<body>
+    <div class="container">
+        <h1>ClassPass Bot Scheduler</h1>
+        <form id="scheduleForm" onsubmit="scheduleBot(event)">
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <input type="text" name="class_name" placeholder="Class Name" required>
+            <input type="text" name="class_time" placeholder="Class Time" required>
+            <input type="datetime-local" name="booking_time" required>
+            <button type="submit">Schedule Bot</button>
+        </form>
+        <div id="message"></div>
+        <a href="/logs?password=DietCoke">View Logs</a>
+    </div>
 </body>
 </html>
