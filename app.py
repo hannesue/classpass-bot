@@ -39,11 +39,7 @@ scheduler.start()
 
 @app.route('/')
 def index():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, email, class_name, class_time, booking_time, status FROM schedules")
-        jobs = cursor.fetchall()
-    return render_template('index.html', jobs=jobs)
+    return render_template('index.html')
 
 @app.route('/schedule', methods=['POST'])
 def schedule_bot():
@@ -62,11 +58,12 @@ def schedule_bot():
             INSERT INTO schedules (email, password, class_name, class_time, booking_time, status)
             VALUES (?, ?, ?, ?, ?, ?)
         """, job)
+        job_id = cursor.lastrowid
         conn.commit()
 
     # Schedule bot execution
     run_time = datetime.strptime(request.form['booking_time'], "%Y-%m-%dT%H:%M")
-    scheduler.add_job(start_bot, 'date', run_date=run_time, args=[cursor.lastrowid])
+    scheduler.add_job(start_bot, 'date', run_date=run_time, args=[job_id])
 
     return jsonify({"message": "✅ Bot scheduled successfully!"})
 
