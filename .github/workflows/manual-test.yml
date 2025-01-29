@@ -18,8 +18,8 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-- name: Test Flask App
-  run: |
-    python app.py &
-    sleep 10
-    curl http://127.0.0.1:5000
+      - name: Test Flask App
+        run: |
+        python app.py &
+        sleep 10
+        curl http://127.0.0.1:5000
