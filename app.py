@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 import os
-import multiprocessing
+import threading
 import json
 import time
 from datetime import datetime
@@ -92,6 +92,10 @@ def run_bot():
         time.sleep(60)
 
 if __name__ == '__main__':
-    bot_process = multiprocessing.Process(target=run_bot)
-    bot_process.start()
+    # Run the bot in a separate thread to ensure it keeps running
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+
+    # Start the Flask app
     app.run(host="0.0.0.0", port=5000, debug=True)
