@@ -1,4 +1,5 @@
 from flask import Flask, request, render_template
+import os
 import threading
 import json
 import time
@@ -14,6 +15,11 @@ app = Flask(__name__)
 
 # Store the job in a file so it persists
 JOB_FILE = "jobs.json"
+
+# Ensure jobs.json exists before reading it
+if not os.path.exists(JOB_FILE):
+    with open(JOB_FILE, "w") as file:
+        json.dump({}, file)  # Create an empty JSON file
 
 @app.route('/')
 def index():
@@ -45,39 +51,31 @@ def run_bot():
                 continue
 
             booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
-            
-            # Wait until it's time to book
+
             while datetime.now() < booking_time:
                 time.sleep(10)
 
-            # Set up Chrome options
             chrome_options = Options()
             chrome_options.add_argument("--headless")
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("--no-sandbox")
 
-            # Launch WebDriver
             driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
             driver.get("https://classpass.com/")
 
-            # Log in to ClassPass
             driver.find_element(By.ID, "email").send_keys(job["email"])
             driver.find_element(By.ID, "password").send_keys(job["password"])
             driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
 
-            # Wait for the page to load
             time.sleep(5)
-
-            # Search for the class and book it
             driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
             time.sleep(2)
 
-            print(f"Attempting to book class '{job['class_name']}' at {job['class_time']}")
+            print(f"Attempting to book class '{job['class_name']}' at {job['class_time']}'")
 
             driver.quit()
 
-            # Clear the job after execution
-            open(JOB_FILE, "w").close()
+            open(JOB_FILE, "w").close()  # Clear job after execution
 
         except Exception as e:
             print(f"Error: {e}")
