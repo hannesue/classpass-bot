@@ -7,11 +7,11 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; text-align: center; }
         .container { max-width: 400px; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); }
-        input, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
+        input, button { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
         button { background-color: #007BFF; color: white; border: none; cursor: pointer; }
         button:hover { background-color: #0056b3; }
         #message { display: none; padding: 10px; margin-top: 10px; color: white; background: green; border-radius: 5px; }
-        .log-link { display: block; margin-top: 15px; text-decoration: none; color: #007BFF; }
+        .log-link { display: block; margin-top: 15px; text-decoration: none; color: #007BFF; font-size: 16px; cursor: pointer; }
     </style>
     <script>
         function scheduleBot(event) {
@@ -24,6 +24,13 @@
                     document.getElementById("message").style.display = "block";
                     document.getElementById("scheduleForm").reset();
                 });
+        }
+
+        function requestLogAccess() {
+            let password = prompt("Enter password to view logs:");
+            if (password) {
+                window.location.href = "/logs?password=" + encodeURIComponent(password);
+            }
         }
     </script>
 </head>
@@ -39,7 +46,7 @@
             <button type="submit">✅ Schedule Bot</button>
         </form>
         <div id="message"></div>
-        <a href="/logs?password=DietCoke" class="log-link">📜 View Logs</a>
+        <a onclick="requestLogAccess()" class="log-link">📜 View Logs</a>
     </div>
 </body>
 </html>
