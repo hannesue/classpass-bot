@@ -1,6 +1,6 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import os
-import threading
+import multiprocessing
 import json
 import time
 from datetime import datetime
@@ -13,13 +13,19 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 app = Flask(__name__)
 
-# Store the job in a file so it persists
+# File paths
 JOB_FILE = "jobs.json"
+LOG_FILE = "logs.json"
+PASSWORD = "DietCoke"  # Password for logs page
 
-# Ensure jobs.json exists before reading it
+# Ensure log files exist
 if not os.path.exists(JOB_FILE):
     with open(JOB_FILE, "w") as file:
-        json.dump({}, file)  # Create an empty JSON file
+        json.dump({}, file)
+
+if not os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "w") as file:
+        json.dump([], file)
 
 @app.route('/')
 def index():
@@ -35,23 +41,49 @@ def schedule_bot():
         "booking_time": request.form['booking_time']
     }
 
+    # Store scheduled job
     with open(JOB_FILE, "w") as file:
         json.dump(job, file)
 
-    print("✅ Job scheduled successfully!")  # Log the job scheduling
+    # Store log entry
+    with open(LOG_FILE, "r+") as file:
+        logs = json.load(file)
+        logs.append({
+            "class_name": job["class_name"],
+            "class_time": job["class_time"],
+            "booking_time": job["booking_time"],
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+        file.seek(0)
+        json.dump(logs, file)
 
-    # Start the bot in a background thread
-import multiprocessing
+    print("✅ Job scheduled successfully!")
 
-if __name__ == '__main__':
+    # Start the bot in a separate process
     bot_process = multiprocessing.Process(target=start_bot)
     bot_process.start()
-    app.run(host="0.0.0.0", port=5000, debug=True)
 
     return "✅ Bot scheduled successfully!"
 
+@app.route('/logs', methods=['GET'])
+def view_logs():
+    password = request.args.get("password")
+
+    if password != PASSWORD:
+        return "❌ Access Denied: Invalid password!", 403
+
+    with open(LOG_FILE, "r") as file:
+        logs = json.load(file)
+
+    html = "<h2>Scheduled Bots Log</h2><table border='1'><tr><th>Class</th><th>Class Time</th><th>Booking Time</th><th>Scheduled At</th></tr>"
+    for log in logs:
+        html += f"<tr><td>{log['class_name']}</td><td>{log['class_time']}</td><td>{log['booking_time']}</td><td>{log['timestamp']}</td></tr>"
+    html += "</table>"
+    
+    return html
+
 def start_bot():
-    print("🔄 Starting the bot in a separate thread...")
+    print("🔄 Starting the bot in a separate process...")
 
     try:
         print("📖 Loading scheduled job...")
@@ -87,7 +119,7 @@ def start_bot():
         driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
         time.sleep(2)
 
-        print(f"🎯 Attempting to book class '{job['class_name']}' at {job['class_time']}'")
+        print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
 
         driver.quit()
 
@@ -96,7 +128,6 @@ def start_bot():
 
     except Exception as e:
         print(f"❌ Error: {e}")
-
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
