@@ -18,8 +18,20 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-      - name: Test Flask App
+      - name: Start Flask App
         run: |
-          python app.py &  # Start Flask in the background
-          sleep 10  # Wait for the server to start
-          curl http://127.0.0.1:5000  # Check if Flask is running
+          python app.py &  # Run Flask in the background
+          sleep 5  # Give it time to start
+
+      - name: Install & Start Ngrok
+        run: |
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list >/dev/null
+          apt update && apt install ngrok
+          ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}  # Use your Ngrok Auth Token
+          ngrok http 5000 > /dev/null &  # Start Ngrok
+
+      - name: Get Ngrok URL
+        run: |
+          sleep 5
+          curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
