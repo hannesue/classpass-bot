@@ -45,25 +45,27 @@ def schedule_bot():
     with open(JOB_FILE, "w") as file:
         json.dump(job, file)
 
-    # Append job to logs, ensuring email is saved
-with open(LOG_FILE, "r+") as file:
-    try:
-        logs = json.load(file)
-    except json.JSONDecodeError:
-        logs = []  # Reset logs if the file is corrupt
+    # Append job to logs
+    with open(LOG_FILE, "r+") as file:
+        try:
+            logs = json.load(file)
+        except json.JSONDecodeError:
+            logs = []  # Reset logs if the file is corrupt
 
-    logs.append({
-        "class_name": job["class_name"],
-        "class_time": job["class_time"],
-        "email": job["email"],  # Ensure email is always saved
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
+        logs.append({
+            "class_name": job["class_name"],
+            "class_time": job["class_time"],
+            "email": job["email"],  # Ensure email is always saved
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
 
-    file.seek(0)
-    json.dump(logs, file)
+        file.seek(0)
+        json.dump(logs, file)
 
     print("✅ Job scheduled successfully!")
-    return "✅ Bot scheduled successfully!"
+
+    return "✅ Bot scheduled successfully!"  # ✅ Make sure this is inside the function
+
 
 @app.route('/logs', methods=['GET'])
 def view_logs():
