@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template
 import os
+import threading
 import json
 import time
 from datetime import datetime
@@ -39,13 +40,16 @@ def schedule_bot():
 
     print("✅ Job scheduled successfully!")  # Log the job scheduling
 
-    # Start the bot immediately when scheduling
-    start_bot()
+    # Start the bot in a background thread
+    bot_thread = threading.Thread(target=start_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
 
     return "✅ Bot scheduled successfully!"
 
 def start_bot():
-    print("🔄 Starting the bot now...")
+    print("🔄 Starting the bot in a separate thread...")
+
     try:
         with open(JOB_FILE, "r") as file:
             job = json.load(file)
