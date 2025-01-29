@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
 import time
 
 app = Flask(__name__)
@@ -23,26 +24,32 @@ def index():
 
 @app.route('/schedule', methods=['POST'])
 def schedule_bot():
-    # Get data from the form
+    # Get form data
     email = request.form['email']
     password = request.form['password']
     class_name = request.form['class_name']
     class_time = request.form['class_time']
-    booking_time = request.form['booking_time']  # Time to run the bot (e.g., 2025-01-29 05:00:00)
+    booking_time = request.form['booking_time']  # Time to run the bot (from form input)
 
-    # Schedule the bot to run at the specified time
+    try:
+        # Convert HTML `datetime-local` format (YYYY-MM-DDTHH:MM) to required format (YYYY-MM-DD HH:MM:SS)
+        booking_time = datetime.strptime(booking_time, "%Y-%m-%dT%H:%M")  # Remove 'T' separator
+    except ValueError as e:
+        return f"❌ Invalid date format! Error: {str(e)}"
+
+    # Schedule the bot
     job_id = f"{email}-{class_name}-{booking_time}"
     if job_id not in scheduled_jobs:
         scheduler.add_job(
             func=run_bot,
             trigger="date",
-            run_date=booking_time,  # When to run the bot
+            run_date=booking_time.strftime("%Y-%m-%d %H:%M:%S"),  # Ensure correct format
             args=[email, password, class_name, class_time],
             id=job_id
         )
         scheduled_jobs[job_id] = True
 
-    return f"Bot scheduled to book class '{class_name}' at '{class_time}' on '{booking_time}'!"
+    return f"✅ Bot scheduled to book '{class_name}' at '{class_time}' on '{booking_time}'!"
 
 def run_bot(email, password, class_name, class_time):
     # Set up Chrome options
@@ -64,7 +71,6 @@ def run_bot(email, password, class_name, class_time):
     time.sleep(5)
 
     # Search for the class and book it
-    # Adjust selectors to match the ClassPass page structure
     driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(class_name)
     time.sleep(2)
 
