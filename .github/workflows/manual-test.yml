@@ -20,6 +20,6 @@ jobs:
 
       - name: Test Flask App
         run: |
-        python app.py &
-        sleep 10
-        curl http://127.0.0.1:5000
+          python app.py &  # Start Flask in the background
+          sleep 10  # Wait for the server to start
+          curl http://127.0.0.1:5000  # Check if Flask is running
