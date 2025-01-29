@@ -51,6 +51,7 @@ def start_bot():
     print("🔄 Starting the bot in a separate thread...")
 
     try:
+        print("📖 Loading scheduled job...")
         with open(JOB_FILE, "r") as file:
             job = json.load(file)
 
@@ -59,9 +60,10 @@ def start_bot():
             return
 
         booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
+        print(f"⏳ Waiting for booking time: {booking_time}")
 
         while datetime.now() < booking_time:
-            print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
+            print(f"⏳ Current time: {datetime.now()} | Waiting for {booking_time}...")
             time.sleep(10)
 
         print("🚀 Running the bot now!")
@@ -91,6 +93,7 @@ def start_bot():
 
     except Exception as e:
         print(f"❌ Error: {e}")
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
