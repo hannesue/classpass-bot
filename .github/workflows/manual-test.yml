@@ -37,7 +37,7 @@ jobs:
       - name: Start Ngrok Tunnel (Persistent Mode)
         run: |
           nohup ngrok http 5000 --log=ngrok.log > ngrok.out 2>&1 &
-          sleep 15  # Give Ngrok enough time to initialize
+          sleep 15  # Ensure Ngrok starts
           cat ngrok.out  # Debugging logs
 
       - name: Confirm Ngrok is Running
@@ -57,8 +57,8 @@ jobs:
             exit 1
           fi
           echo "🔗 Ngrok Public URL: $NGROK_URL"
-          echo "::set-output name=ngrok_url::$NGROK_URL"
+          echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV  # Updated from deprecated set-output
 
       - name: Test Access to Flask App
         run: |
-          curl --fail "$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')" || echo "❌ Failed to reach Flask app."
+          curl --fail "$NGROK_URL" || echo "❌ Failed to reach Flask app."
