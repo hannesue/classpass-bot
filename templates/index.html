@@ -76,7 +76,7 @@
             margin-bottom: 15px;
         }
 
-        /* Log Link */
+        /* Floating Log Button */
         .log-link {
             position: absolute;
             top: 10px;
@@ -99,7 +99,7 @@
 
     <div class="container">
         <div class="log-link">
-            <a href="/logs">🔍 View Logs</a>
+            <a href="#" onclick="requestLogs()">🔍 View Logs</a>
         </div>
         <h1>📅 ClassPass Bot Scheduler</h1>
         <form id="botForm">
@@ -126,7 +126,7 @@
 
             <div class="form-group">
                 <label for="booking_time">📅 Booking Time (Bot Activation):</label>
-                <input type="datetime-local" id="booking_time" name="booking_time" step="1" required>
+                <input type="datetime-local" id="booking_time" name="booking_time" required>
             </div>
 
             <button type="submit">✅ Schedule Bot</button>
@@ -149,6 +149,13 @@
                 alert("❌ Error scheduling bot. Please try again.");
             });
         });
+
+        function requestLogs() {
+            let password = prompt("Enter Password to View Logs:");
+            if (password !== null) {
+                window.location.href = "/logs?password=" + encodeURIComponent(password);
+            }
+        }
     </script>
 
 </body>
