@@ -2,7 +2,7 @@ from flask import Flask, request, render_template
 import os
 import json
 import time
-import threading
+import multiprocessing
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -114,10 +114,10 @@ def worker():
 
         time.sleep(60)  # Sleep and check again
 
-# ✅ Start worker in a separate thread when app starts
 if __name__ == '__main__':
-    worker_thread = threading.Thread(target=worker, daemon=True)
-    worker_thread.start()
-    print("🚀 Worker Thread Started!")
-
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Start worker in a separate process before starting Flask
+    bot_process = multiprocessing.Process(target=worker, daemon=True)
+    bot_process.start()
+    print("🚀 Worker Process Started!")
+    
+    app.run(host="0.0.0.0", port=10000, debug=True)
