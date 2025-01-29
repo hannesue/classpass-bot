@@ -8,11 +8,22 @@
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; text-align: center; }
         .container { max-width: 600px; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); }
         h1 { font-size: 24px; margin-bottom: 10px; }
-        .log-entry { padding: 10px; margin: 10px 0; background: #f9f9f9; border-radius: 5px; text-align: left; }
+        .log-entry { padding: 10px; margin: 10px 0; background: #f9f9f9; border-radius: 5px; text-align: left; display: flex; justify-content: space-between; align-items: center; }
         .log-entry strong { color: #007BFF; }
         .back-link { display: block; margin-top: 15px; text-decoration: none; color: #007BFF; font-size: 16px; }
         .log-container { max-height: 400px; overflow-y: auto; padding: 10px; border: 1px solid #ddd; background: #fff; border-radius: 5px; }
+        .delete-btn { background: red; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .delete-btn:hover { background: darkred; }
     </style>
+    <script>
+        function deleteLog(index) {
+            fetch("/delete_log", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ index: index })
+            }).then(() => location.reload());
+        }
+    </script>
 </head>
 <body>
     <div class="container">
@@ -20,10 +31,13 @@
         <div class="log-container">
             {% for log in logs %}
                 <div class="log-entry">
-                    <strong>👤 User:</strong> {{ log.scheduler }}<br>
-                    <strong>🏋️‍♂️ Class:</strong> {{ log.class_name }}<br>
-                    <strong>⏰ Time:</strong> {{ log.class_time }}<br>
-                    <strong>📅 Scheduled:</strong> {{ log.timestamp }}
+                    <div>
+                        <strong>👤 User:</strong> {{ log.scheduler }}<br>
+                        <strong>🏋️‍♂️ Class:</strong> {{ log.class_name }}<br>
+                        <strong>⏰ Time:</strong> {{ log.class_time }}<br>
+                        <strong>📅 Scheduled:</strong> {{ log.timestamp }}
+                    </div>
+                    <button class="delete-btn" onclick="deleteLog({{ loop.index0 }})">❌ Delete</button>
                 </div>
             {% endfor %}
         </div>
