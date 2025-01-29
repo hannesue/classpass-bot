@@ -44,7 +44,6 @@ def schedule_bot():
     with open(JOB_FILE, "w") as file:
         json.dump(job, file)
 
-    # Store in logs
     with open(LOG_FILE, "r+") as file:
         logs = json.load(file)
         logs.append({
@@ -55,10 +54,10 @@ def schedule_bot():
         })
         file.seek(0)
         json.dump(logs, file)
+        file.truncate()
 
     print("✅ Job scheduled successfully!")
 
-    # Schedule the bot
     run_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
     scheduler.add_job(start_bot, 'date', run_date=run_time, id="classpass_bot")
 
@@ -66,14 +65,25 @@ def schedule_bot():
 
 @app.route('/logs', methods=['GET'])
 def view_logs():
-    password = request.args.get("password")
-    if password != PASSWORD:
+    if request.args.get("password") != PASSWORD:
         return "❌ Access Denied: Invalid password!", 403
 
     with open(LOG_FILE, "r") as file:
         logs = json.load(file)
 
     return render_template("logs.html", logs=logs)
+
+@app.route('/delete_log', methods=['POST'])
+def delete_log():
+    index = request.json.get("index")
+    with open(LOG_FILE, "r+") as file:
+        logs = json.load(file)
+        if 0 <= index < len(logs):
+            logs.pop(index)
+            file.seek(0)
+            json.dump(logs, file)
+            file.truncate()
+    return jsonify({"message": "✅ Log deleted!"})
 
 def start_bot():
     print("🚀 Running the bot now!")
