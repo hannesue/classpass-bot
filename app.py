@@ -1,9 +1,9 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import os
 import json
 import time
-import multiprocessing
 from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -13,19 +13,19 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 app = Flask(__name__)
 
-# File paths
+# Store job data
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
-PASSWORD = "DietCoke"  # Password for logs page
+PASSWORD = "DietCoke"
 
-# Ensure log files exist
-if not os.path.exists(JOB_FILE):
-    with open(JOB_FILE, "w") as file:
-        json.dump({}, file)
-
+# Ensure log file exists
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w") as file:
         json.dump([], file)
+
+# Set up scheduler
+scheduler = BackgroundScheduler()
+scheduler.start()
 
 @app.route('/')
 def index():
@@ -41,83 +41,72 @@ def schedule_bot():
         "booking_time": request.form['booking_time']
     }
 
-    # Save latest job
     with open(JOB_FILE, "w") as file:
         json.dump(job, file)
 
-    # Append job to logs
+    # Store in logs
     with open(LOG_FILE, "r+") as file:
-        try:
-            logs = json.load(file)
-        except json.JSONDecodeError:
-            logs = []
-
+        logs = json.load(file)
         logs.append({
+            "scheduler": job["email"],
             "class_name": job["class_name"],
             "class_time": job["class_time"],
-            "email": job["email"],
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
-
         file.seek(0)
         json.dump(logs, file)
 
     print("✅ Job scheduled successfully!")
 
-    return "✅ Bot scheduled successfully!"
+    # Schedule the bot
+    run_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
+    scheduler.add_job(start_bot, 'date', run_date=run_time, id="classpass_bot")
 
-def worker():
-    """Worker process that continuously checks for scheduled jobs and executes them."""
-    print("🚀 Background Worker Started...")
+    return jsonify({"message": "✅ Bot scheduled successfully!"})
 
-    while True:
-        try:
-            with open(JOB_FILE, "r") as file:
-                job = json.load(file)
+@app.route('/logs', methods=['GET'])
+def view_logs():
+    password = request.args.get("password")
+    if password != PASSWORD:
+        return "❌ Access Denied: Invalid password!", 403
 
-            if not job or "booking_time" not in job:
-                print("⏳ No valid job found, checking again in 60 seconds...")
-                time.sleep(60)
-                continue
+    with open(LOG_FILE, "r") as file:
+        logs = json.load(file)
 
-            booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
-            print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
+    return render_template("logs.html", logs=logs)
 
-            if datetime.now() >= booking_time:
-                print("🚀 Running the bot now!")
+def start_bot():
+    print("🚀 Running the bot now!")
 
-                chrome_options = Options()
-                chrome_options.add_argument("--headless")
-                chrome_options.add_argument("--disable-gpu")
-                chrome_options.add_argument("--no-sandbox")
+    try:
+        with open(JOB_FILE, "r") as file:
+            job = json.load(file)
 
-                driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-                driver.get("https://classpass.com/")
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
 
-                driver.find_element(By.ID, "email").send_keys(job["email"])
-                driver.find_element(By.ID, "password").send_keys(job["password"])
-                driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver.get("https://classpass.com/")
 
-                time.sleep(5)
-                driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
-                time.sleep(2)
+        driver.find_element(By.ID, "email").send_keys(job["email"])
+        driver.find_element(By.ID, "password").send_keys(job["password"])
+        driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
 
-                print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
+        time.sleep(5)
+        driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
+        time.sleep(2)
 
-                driver.quit()
+        print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
 
-                open(JOB_FILE, "w").close()  # Clear job after execution
-                print("✅ Job completed and cleared.")
+        driver.quit()
 
-        except Exception as e:
-            print(f"❌ Error in worker: {e}")
+        open(JOB_FILE, "w").close()  # Clear job after execution
+        print("✅ Job completed and cleared.")
 
-        time.sleep(60)  # Sleep and check again
+    except Exception as e:
+        print(f"❌ Error: {e}")
 
 if __name__ == '__main__':
-    # Start worker in a separate process before starting Flask
-    bot_process = multiprocessing.Process(target=worker, daemon=True)
-    bot_process.start()
-    print("🚀 Worker Process Started!")
-    
-    app.run(host="0.0.0.0", port=10000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
