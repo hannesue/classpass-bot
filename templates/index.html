@@ -30,6 +30,7 @@
             max-width: 400px;
             width: 100%;
             text-align: center;
+            position: relative;
         }
 
         h1 {
@@ -75,19 +76,33 @@
             margin-bottom: 15px;
         }
 
-        /* Responsive Design */
-        @media (max-width: 500px) {
-            .container {
-                padding: 15px;
-            }
+        /* Log Link */
+        .log-link {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 14px;
+        }
+
+        .log-link a {
+            text-decoration: none;
+            color: #007BFF;
+            font-weight: bold;
+        }
+
+        .log-link a:hover {
+            color: #0056b3;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <div class="log-link">
+            <a href="/logs">🔍 View Logs</a>
+        </div>
         <h1>📅 ClassPass Bot Scheduler</h1>
-        <form action="/schedule" method="POST" onsubmit="return validateForm()">
+        <form id="botForm">
             
             <div class="form-group">
                 <label for="email">📧 Email:</label>
@@ -119,24 +134,21 @@
     </div>
 
     <script>
-        // Auto-fill the booking time field with current date & time
-        document.addEventListener("DOMContentLoaded", function() {
-            let bookingField = document.getElementById("booking_time");
-            let now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); // Adjust for time zone
-            bookingField.value = now.toISOString().slice(0, 16); // Format for datetime-local input
-        });
+        document.getElementById("botForm").addEventListener("submit", function(event) {
+            event.preventDefault(); 
 
-        // Simple validation for empty class time
-        function validateForm() {
-            let classTime = document.getElementById("class_time").value;
-            
-            if (classTime.trim() === "") {
-                alert("⚠️ Class time cannot be empty!");
-                return false;
-            }
-            return true;
-        }
+            let formData = new FormData(this);
+
+            fetch("/schedule", {
+                method: "POST",
+                body: formData
+            }).then(response => response.text()).then(data => {
+                alert("✅ Bot scheduled successfully!"); 
+                document.getElementById("botForm").reset(); 
+            }).catch(error => {
+                alert("❌ Error scheduling bot. Please try again.");
+            });
+        });
     </script>
 
 </body>
