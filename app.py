@@ -221,8 +221,13 @@ def start_bot():
         time.sleep(60)  # Keep checking every minute
 
 if __name__ == '__main__':
+    print("🚀 Starting Flask and background bot process...")
     bot_process = multiprocessing.Process(target=start_bot)
-    bot_process.daemon = True  
-    bot_process.start()  
-    print("🚀 Bot process started in the background!")
+    bot_process.daemon = True
+    bot_process.start()
+
+    # Delay for a few seconds to ensure bot starts
+    time.sleep(3)
+    print("✅ Bot process confirmed running!")
+
     app.run(host="0.0.0.0", port=5000, debug=True)
