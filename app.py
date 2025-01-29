@@ -45,17 +45,22 @@ def schedule_bot():
     with open(JOB_FILE, "w") as file:
         json.dump(job, file)
 
-    # Append job to logs
-    with open(LOG_FILE, "r+") as file:
+    # Append job to logs, ensuring email is saved
+with open(LOG_FILE, "r+") as file:
+    try:
         logs = json.load(file)
-        logs.append({
-            "class_name": job["class_name"],
-            "class_time": job["class_time"],
-            "booking_time": job["booking_time"],
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-        file.seek(0)
-        json.dump(logs, file)
+    except json.JSONDecodeError:
+        logs = []  # Reset logs if the file is corrupt
+
+    logs.append({
+        "class_name": job["class_name"],
+        "class_time": job["class_time"],
+        "email": job["email"],  # Ensure email is always saved
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+    file.seek(0)
+    json.dump(logs, file)
 
     print("✅ Job scheduled successfully!")
     return "✅ Bot scheduled successfully!"
@@ -67,8 +72,11 @@ def view_logs():
     if password != PASSWORD:
         return "<h2 style='color:red; text-align:center;'>❌ Access Denied: Invalid password!</h2>", 403
 
-    with open(LOG_FILE, "r") as file:
-        logs = json.load(file)
+    try:
+        with open(LOG_FILE, "r") as file:
+            logs = json.load(file)
+    except json.JSONDecodeError:
+        logs = []  # If file is empty or corrupt, reset logs to an empty list
 
     # Modern HTML Template for Logs
     html = """
@@ -147,12 +155,18 @@ def view_logs():
                 </tr>"""
 
     for log in logs:
+        # Handle missing keys gracefully
+        class_name = log.get("class_name", "Unknown")
+        class_time = log.get("class_time", "Unknown")
+        scheduler = log.get("email", "No Email Provided")  # Default if missing
+        timestamp = log.get("timestamp", "Unknown")
+
         html += f"""
                 <tr>
-                    <td>{log['class_name']}</td>
-                    <td>{log['class_time']}</td>
-                    <td>{log['email']}</td>
-                    <td>{log['timestamp']}</td>
+                    <td>{class_name}</td>
+                    <td>{class_time}</td>
+                    <td>{scheduler}</td>
+                    <td>{timestamp}</td>
                 </tr>"""
 
     html += """
@@ -163,6 +177,7 @@ def view_logs():
     </html>
     """
     return html
+
 
 def start_bot():
     print("🔄 Background bot is now running...")
