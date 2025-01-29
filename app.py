@@ -1,6 +1,5 @@
 from flask import Flask, request, render_template
 import os
-import threading
 import json
 import time
 from datetime import datetime
@@ -10,6 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
@@ -67,63 +67,53 @@ def schedule_bot():
     return "✅ Bot scheduled successfully!"
 
 def start_bot():
-    print("🔄 Background bot is now running...")
+    print("🔄 Checking for scheduled jobs...")
 
-    while True:
-        try:
-            with open(JOB_FILE, "r") as file:
-                job = json.load(file)
+    with open(JOB_FILE, "r") as file:
+        job = json.load(file)
 
-            if not job or "booking_time" not in job:
-                print("⏳ No valid job found, checking again in 60 seconds...")
-                time.sleep(60)
-                continue
+    if not job or "booking_time" not in job:
+        print("⏳ No valid job found, checking again later...")
+        return
 
-            try:
-                booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
-                print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
-            except Exception as e:
-                print(f"❌ Error parsing booking time: {e}")
-                time.sleep(60)
-                continue
+    try:
+        booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
+        print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
+    except Exception as e:
+        print(f"❌ Error parsing booking time: {e}")
+        return
 
-            while datetime.now() < booking_time:
-                print(f"⏳ Current time: {datetime.now()} | Waiting for {booking_time}...")
-                time.sleep(10)
+    if datetime.now() >= booking_time:
+        print("🚀 Running the bot now!")
 
-            print("🚀 Running the bot now!")
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
 
-            chrome_options = Options()
-            chrome_options.add_argument("--headless")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--no-sandbox")
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver.get("https://classpass.com/")
 
-            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-            driver.get("https://classpass.com/")
+        driver.find_element(By.ID, "email").send_keys(job["email"])
+        driver.find_element(By.ID, "password").send_keys(job["password"])
+        driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
 
-            driver.find_element(By.ID, "email").send_keys(job["email"])
-            driver.find_element(By.ID, "password").send_keys(job["password"])
-            driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
+        time.sleep(5)
+        driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
+        time.sleep(2)
 
-            time.sleep(5)
-            driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
-            time.sleep(2)
+        print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
 
-            print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
+        driver.quit()
 
-            driver.quit()
+        open(JOB_FILE, "w").close()  # Clear job after execution
+        print("✅ Job completed and cleared.")
 
-            open(JOB_FILE, "w").close()  # Clear job after execution
-            print("✅ Job completed and cleared.")
+# ✅ Set up APScheduler to run `start_bot()` every minute
+scheduler = BackgroundScheduler()
+scheduler.add_job(start_bot, 'interval', minutes=1)
+scheduler.start()
 
-        except Exception as e:
-            print(f"❌ Error: {e}")
-
-        time.sleep(60)
-
-# ✅ Ensure the bot process starts when the app starts
 if __name__ == '__main__':
-    bot_thread = threading.Thread(target=start_bot, daemon=True)
-    bot_thread.start()
-    print("🚀 Bot thread started at app launch!")
+    print("🚀 Starting Flask app with APScheduler running in the background!")
     app.run(host="0.0.0.0", port=5000, debug=True)
