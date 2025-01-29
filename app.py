@@ -2,6 +2,7 @@ from flask import Flask, request, render_template
 import os
 import json
 import time
+import threading
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -9,7 +10,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
-from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
@@ -66,54 +66,58 @@ def schedule_bot():
 
     return "✅ Bot scheduled successfully!"
 
-def start_bot():
-    print("🔄 Checking for scheduled jobs...")
+def worker():
+    """Worker process that continuously checks for scheduled jobs and executes them."""
+    print("🚀 Background Worker Started...")
+    
+    while True:
+        try:
+            with open(JOB_FILE, "r") as file:
+                job = json.load(file)
 
-    with open(JOB_FILE, "r") as file:
-        job = json.load(file)
+            if not job or "booking_time" not in job:
+                print("⏳ No valid job found, checking again in 60 seconds...")
+                time.sleep(60)
+                continue
 
-    if not job or "booking_time" not in job:
-        print("⏳ No valid job found, checking again later...")
-        return
+            booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
+            print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
 
-    try:
-        booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
-        print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
-    except Exception as e:
-        print(f"❌ Error parsing booking time: {e}")
-        return
+            if datetime.now() >= booking_time:
+                print("🚀 Running the bot now!")
 
-    if datetime.now() >= booking_time:
-        print("🚀 Running the bot now!")
+                chrome_options = Options()
+                chrome_options.add_argument("--headless")
+                chrome_options.add_argument("--disable-gpu")
+                chrome_options.add_argument("--no-sandbox")
 
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
+                driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+                driver.get("https://classpass.com/")
 
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-        driver.get("https://classpass.com/")
+                driver.find_element(By.ID, "email").send_keys(job["email"])
+                driver.find_element(By.ID, "password").send_keys(job["password"])
+                driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
 
-        driver.find_element(By.ID, "email").send_keys(job["email"])
-        driver.find_element(By.ID, "password").send_keys(job["password"])
-        driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
+                time.sleep(5)
+                driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
+                time.sleep(2)
 
-        time.sleep(5)
-        driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
-        time.sleep(2)
+                print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
 
-        print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
+                driver.quit()
 
-        driver.quit()
+                open(JOB_FILE, "w").close()  # Clear job after execution
+                print("✅ Job completed and cleared.")
 
-        open(JOB_FILE, "w").close()  # Clear job after execution
-        print("✅ Job completed and cleared.")
+        except Exception as e:
+            print(f"❌ Error in worker: {e}")
 
-# ✅ Set up APScheduler to run `start_bot()` every minute
-scheduler = BackgroundScheduler()
-scheduler.add_job(start_bot, 'interval', minutes=1)
-scheduler.start()
+        time.sleep(60)  # Sleep and check again
 
+# ✅ Start worker in a separate thread when app starts
 if __name__ == '__main__':
-    print("🚀 Starting Flask app with APScheduler running in the background!")
+    worker_thread = threading.Thread(target=worker, daemon=True)
+    worker_thread.start()
+    print("🚀 Worker Thread Started!")
+    
     app.run(host="0.0.0.0", port=5000, debug=True)
