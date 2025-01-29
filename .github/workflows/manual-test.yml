@@ -23,23 +23,30 @@ jobs:
           curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
           echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
           sudo apt update && sudo apt install ngrok
+          ngrok --version  # Check if Ngrok installed correctly
 
       - name: Start Flask App
         run: |
           python app.py &
-          sleep 5  # Give the app time to start
+          sleep 5  # Give Flask time to start
 
       - name: Start Ngrok Tunnel
         run: |
-          ngrok http 5000 > /dev/null &
-          sleep 5  # Wait for Ngrok to initialize
+          ngrok http 5000 > ngrok.log &
+          sleep 10  # Wait for Ngrok to initialize
+
+      - name: Debug Ngrok Logs
+        run: cat ngrok.log || echo "Ngrok log not found!"
 
       - name: Get Ngrok URL
         run: |
           NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          if [[ -z "$NGROK_URL" || "$NGROK_URL" == "null" ]]; then
+            echo "❌ Ngrok URL not found! Check logs above."
+            exit 1
+          fi
           echo "🔗 Ngrok Public URL: $NGROK_URL"
           echo "::set-output name=ngrok_url::$NGROK_URL"
 
       - name: Test Access to Flask App
-        run: curl --fail $(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-
+        run: curl --fail "$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')" || echo "❌ Failed to reach Flask app."
