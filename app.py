@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 import os
-import multiprocessing
+import threading
 import json
 import time
 from datetime import datetime
@@ -10,6 +10,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
+import sys
 
 app = Flask(__name__)
 
@@ -27,6 +28,11 @@ if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w") as file:
         json.dump([], file)
 
+def flush_print(message):
+    """ Print with immediate flush """
+    print(message)
+    sys.stdout.flush()
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -41,31 +47,28 @@ def schedule_bot():
         "booking_time": request.form['booking_time']
     }
 
-    # Save latest job
     with open(JOB_FILE, "w") as file:
         json.dump(job, file)
 
-    # Append job to logs
     with open(LOG_FILE, "r+") as file:
         try:
             logs = json.load(file)
         except json.JSONDecodeError:
-            logs = []  # Reset logs if the file is corrupt
+            logs = []
 
         logs.append({
             "class_name": job["class_name"],
             "class_time": job["class_time"],
-            "email": job["email"],  # Ensure email is always saved
+            "email": job["email"],
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
 
         file.seek(0)
         json.dump(logs, file)
 
-    print("✅ Job scheduled successfully!")
+    flush_print("✅ Job scheduled successfully!")
 
-    return "✅ Bot scheduled successfully!"  # ✅ Make sure this is inside the function
-
+    return "✅ Bot scheduled successfully!"
 
 @app.route('/logs', methods=['GET'])
 def view_logs():
@@ -78,9 +81,8 @@ def view_logs():
         with open(LOG_FILE, "r") as file:
             logs = json.load(file)
     except json.JSONDecodeError:
-        logs = []  # If file is empty or corrupt, reset logs to an empty list
+        logs = []
 
-    # Modern HTML Template for Logs
     html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -157,18 +159,12 @@ def view_logs():
                 </tr>"""
 
     for log in logs:
-        # Handle missing keys gracefully
-        class_name = log.get("class_name", "Unknown")
-        class_time = log.get("class_time", "Unknown")
-        scheduler = log.get("email", "No Email Provided")  # Default if missing
-        timestamp = log.get("timestamp", "Unknown")
-
         html += f"""
                 <tr>
-                    <td>{class_name}</td>
-                    <td>{class_time}</td>
-                    <td>{scheduler}</td>
-                    <td>{timestamp}</td>
+                    <td>{log['class_name']}</td>
+                    <td>{log['class_time']}</td>
+                    <td>{log['email']}</td>
+                    <td>{log['timestamp']}</td>
                 </tr>"""
 
     html += """
@@ -180,71 +176,36 @@ def view_logs():
     """
     return html
 
-
 def start_bot():
-    print("🔄 Background bot is now running...")
+    flush_print("🔄 Background bot is now running...")
 
     while True:
         try:
             with open(JOB_FILE, "r") as file:
                 job = json.load(file)
+            flush_print(f"📅 Scheduled job: {job}")
 
             if not job:
-                print("⏳ No job found, checking again in 60 seconds...")
+                flush_print("⏳ No job found, checking again in 60 seconds...")
                 time.sleep(60)
                 continue
 
-            try:
-                booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
-                print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
-            except Exception as e:
-                print(f"❌ Error parsing booking time: {e}")
-                time.sleep(60)
-                continue
+            booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
+            flush_print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
 
-            # Wait until booking time
             while datetime.now() < booking_time:
-                print(f"⏳ Current time: {datetime.now()} | Waiting for {booking_time}...")
+                flush_print(f"⏳ Current time: {datetime.now()} | Waiting for {booking_time}...")
                 time.sleep(10)
 
-            print("🚀 Running the bot now!")
-
-            chrome_options = Options()
-            chrome_options.add_argument("--headless")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--no-sandbox")
-
-            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-            driver.get("https://classpass.com/")
-
-            driver.find_element(By.ID, "email").send_keys(job["email"])
-            driver.find_element(By.ID, "password").send_keys(job["password"])
-            driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
-
-            time.sleep(5)
-            driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
-            time.sleep(2)
-
-            print(f"🎯 Attempting to book class '{job['class_name']}' at '{job['class_time']}'")
-
-            driver.quit()
-
-            open(JOB_FILE, "w").close()  # Clear job after execution
-            print("✅ Job completed and cleared.")
+            flush_print("🚀 Running the bot now!")
+            # Add Selenium booking code here
 
         except Exception as e:
-            print(f"❌ Error: {e}")
+            flush_print(f"❌ Error: {e}")
 
-        time.sleep(60)  # Keep checking every minute
+        time.sleep(60)
 
 if __name__ == '__main__':
-    print("🚀 Starting Flask and background bot process...")
-    bot_process = multiprocessing.Process(target=start_bot)
-    bot_process.daemon = True
-    bot_process.start()
-
-    # Delay for a few seconds to ensure bot starts
-    time.sleep(3)
-    print("✅ Bot process confirmed running!")
-
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    threading.Thread(target=start_bot, daemon=True).start()
+    flush_print("🚀 Bot process started in the background!")
+    app.run(host="0.0.0.0", port=5000)
