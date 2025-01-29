@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
 import os
-import threading
+import multiprocessing
 import json
 import time
 from datetime import datetime
@@ -41,19 +41,27 @@ def schedule_bot():
     return "✅ Bot scheduled successfully!"
 
 def run_bot():
+    print("🔄 Background bot is now running...")  # Log when the bot starts
+
     while True:
         try:
+            print("📖 Checking for scheduled jobs...")  # Log when checking for jobs
+            
             with open(JOB_FILE, "r") as file:
                 job = json.load(file)
 
             if not job:
+                print("⏳ No job found, checking again in 60 seconds...")
                 time.sleep(60)
                 continue
 
             booking_time = datetime.strptime(job["booking_time"], "%Y-%m-%dT%H:%M")
 
             while datetime.now() < booking_time:
+                print(f"⏳ Waiting for booking time: {booking_time} (Current time: {datetime.now()})")
                 time.sleep(10)
+
+            print("🚀 Running the bot now!")
 
             chrome_options = Options()
             chrome_options.add_argument("--headless")
@@ -71,21 +79,19 @@ def run_bot():
             driver.find_element(By.XPATH, f"//input[@placeholder='Search']").send_keys(job["class_name"])
             time.sleep(2)
 
-            print(f"Attempting to book class '{job['class_name']}' at {job['class_time']}'")
+            print(f"🎯 Attempting to book class '{job['class_name']}' at {job['class_time']}'")
 
             driver.quit()
 
             open(JOB_FILE, "w").close()  # Clear job after execution
+            print("✅ Job completed and cleared.")
 
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"❌ Error: {e}")
 
         time.sleep(60)
 
-# Start bot in background
-bot_thread = threading.Thread(target=run_bot)
-bot_thread.daemon = True
-bot_thread.start()
-
 if __name__ == '__main__':
+    bot_process = multiprocessing.Process(target=run_bot)
+    bot_process.start()
     app.run(host="0.0.0.0", port=5000, debug=True)
