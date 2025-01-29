@@ -142,7 +142,7 @@ def view_logs():
                 <tr>
                     <th>Class</th>
                     <th>Class Time</th>
-                    <th>Booking Time</th>
+                    <th>Scheduler</th>
                     <th>Scheduled At</th>
                 </tr>"""
 
@@ -151,7 +151,7 @@ def view_logs():
                 <tr>
                     <td>{log['class_name']}</td>
                     <td>{log['class_time']}</td>
-                    <td>{log['booking_time']}</td>
+                    <td>{log['email']}</td>
                     <td>{log['timestamp']}</td>
                 </tr>"""
 
@@ -185,6 +185,7 @@ def start_bot():
                 time.sleep(60)
                 continue
 
+            # Wait until booking time
             while datetime.now() < booking_time:
                 print(f"⏳ Current time: {datetime.now()} | Waiting for {booking_time}...")
                 time.sleep(10)
@@ -217,7 +218,7 @@ def start_bot():
         except Exception as e:
             print(f"❌ Error: {e}")
 
-        time.sleep(60)
+        time.sleep(60)  # Keep checking every minute
 
 if __name__ == '__main__':
     bot_process = multiprocessing.Process(target=start_bot)
