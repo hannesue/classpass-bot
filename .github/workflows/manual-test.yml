@@ -25,6 +25,10 @@ jobs:
           sudo apt update && sudo apt install ngrok
           ngrok --version  # Verify installation
 
+      - name: Authenticate Ngrok (REQUIRED)
+        run: |
+          ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+
       - name: Start Flask App
         run: |
           python app.py &
@@ -32,7 +36,7 @@ jobs:
 
       - name: Start Ngrok Tunnel
         run: |
-          ngrok http 5000 > ngrok.log 2>&1 &
+          ngrok http 5000 --log=ngrok.log > /dev/null 2>&1 &
           sleep 10  # Give Ngrok time to initialize
 
       - name: Debug Ngrok Logs
@@ -40,8 +44,8 @@ jobs:
 
       - name: Confirm Ngrok is Running
         run: |
-          if ! pgrep -f "ngrok http"; then
-            echo "❌ Ngrok is NOT running!"
+          if ! pgrep -f "ngrok"; then
+            echo "❌ Ngrok is NOT running! Check logs above."
             exit 1
           else
             echo "✅ Ngrok is running."
