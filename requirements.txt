@@ -1,5 +1,4 @@
-flask
+Flask
 selenium
 webdriver-manager
-gunicorn
-gevent
+apscheduler
