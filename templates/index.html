@@ -127,13 +127,12 @@
             bookingField.value = now.toISOString().slice(0, 16); // Format for datetime-local input
         });
 
-        // Basic validation before submitting the form
+        // Simple validation for empty class time
         function validateForm() {
             let classTime = document.getElementById("class_time").value;
-            let classTimeRegex = /^([0-9]{1,2}):([0-9]{2})\\s?(AM|PM)?$/i;
-
-            if (!classTimeRegex.test(classTime)) {
-                alert("⚠️ Please enter a valid class time (e.g., '06:00 AM')");
+            
+            if (classTime.trim() === "") {
+                alert("⚠️ Class time cannot be empty!");
                 return false;
             }
             return true;
