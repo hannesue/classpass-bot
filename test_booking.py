@@ -30,8 +30,8 @@ def login():
     time.sleep(2)
     
     # Enter credentials and log in
-    driver.find_element(By.ID, "email").send_keys("your_email")
-    driver.find_element(By.ID, "password").send_keys("your_password")
+    driver.find_element(By.ID, "email").send_keys("ueberschaer@google.com")
+    driver.find_element(By.ID, "password").send_keys("Glorchen1992!")
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
     
     print("✅ Logged in successfully")
