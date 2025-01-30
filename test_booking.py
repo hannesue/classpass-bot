@@ -6,8 +6,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 
 # Sauce Labs credentials (replace with your actual credentials)
-SAUCE_USERNAME = "oauth-hannes.ueberschaer-158e3"
-SAUCE_ACCESS_KEY = "fc209d59-4f3d-4dc9-aefe-85295608343a"
+SAUCE_USERNAME = "oauth-ueberschaergbr-dc0f3"
+SAUCE_ACCESS_KEY = "78421343-d4ed-4a10-981f-6194ecfc7122"
 SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.saucelabs.com/wd/hub"
 
 # Desired capabilities for Sauce Labs
