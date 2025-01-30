@@ -1,3 +1,4 @@
+   
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -13,7 +14,7 @@ SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.
 # Desired capabilities for Sauce Labs
 sauce_options = {
     "screenResolution": "1920x1080",  # High resolution for better UI interaction
-    "name": "ClassPass Date Scrolling Test",  # Name of test in Sauce Labs
+    "name": "ClassPass Date Selection Test",  # Test name in Sauce Labs
     "build": "ClassPass_Test_Build"  # Optional build identifier
 }
 
@@ -42,28 +43,44 @@ def navigate_to_studio():
     driver.get("https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt")
     time.sleep(5)
 
-def click_next_day_four_times():
-    print("📌 Clicking 'Next Day' button 4 times...")
+def find_and_select_date(target_date):
+    """
+    Finds the currently displayed date on ClassPass and navigates to the correct date.
+    """
+    print(f"📌 Looking for target date: {target_date}")
 
-    for i in range(4):  # Click "Next Day" 4 times
+    while True:
         try:
-            next_day_button = driver.find_element(By.XPATH, "//button[@aria-label='Next day']")
-            next_day_button.click()
-            print(f"➡ Clicked 'Next Day' button {i + 1}/4 times")
-            time.sleep(2)  # Wait for transition
+            # Get the currently displayed date
+            current_date_element = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']")
+            current_date_text = current_date_element.text.strip()
+            print(f"🔍 Current displayed date: {current_date_text}")
+
+            if current_date_text == target_date:
+                print("✅ Target date found!")
+                break  # Exit loop if the correct date is displayed
+
+            elif current_date_text < target_date:
+                print("➡ Moving to Next Day")
+                next_button = driver.find_element(By.XPATH, "//button[@aria-label='Next day']")
+                next_button.click()
+            else:
+                print("⬅ Moving to Previous Day")
+                prev_button = driver.find_element(By.XPATH, "//button[@aria-label='Previous day']")
+                prev_button.click()
+
+            time.sleep(2)  # Allow time for page transition
         except Exception as e:
-            print(f"❌ Error clicking 'Next Day' button: {e}")
-            break  # Stop clicking if button not found
+            print(f"❌ Error finding or clicking date: {e}")
+            break  # Stop loop on failure
 
 if __name__ == "__main__":
     try:
         login()
         navigate_to_studio()
-        click_next_day_four_times()  # Test clicking next day 4 times
-        print("✅ Test Completed")
+        find_and_select_date("Mon, Feb 3")  # Set the target date here
+        print("✅ Date Selection Test Completed")
     except Exception as e:
         print(f"❌ Test failed: {e}")
     finally:
         driver.quit()
-
-
