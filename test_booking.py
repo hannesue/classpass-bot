@@ -2,62 +2,69 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 import time
 
-# 🔑 Sauce Labs Credentials (Directly in Code)
+# Sauce Labs credentials (replace with your actual credentials)
 SAUCE_USERNAME = "oauth-hannes.ueberschaer-158e3"
 SAUCE_ACCESS_KEY = "fc209d59-4f3d-4dc9-aefe-85295608343a"
-
-# 🚀 Sauce Labs URL
 SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.saucelabs.com/wd/hub"
 
-# 🌍 Desired Capabilities for Chrome on Sauce Labs
-capabilities = {
+# Desired capabilities for Sauce Labs
+desired_capabilities = {
     "browserName": "chrome",
     "browserVersion": "latest",
-    "platformName": "Windows 10",
-    "sauce:options": {}
+    "platformName": "Windows 10"
 }
 
-# 🚀 Connect to Sauce Labs
+# Start WebDriver
 print("🚀 Connecting to Sauce Labs...")
 driver = webdriver.Remote(command_executor=SAUCE_URL, options=webdriver.ChromeOptions())
 
-try:
-    # 🏁 Step 1: Open ClassPass Login Page
-    print("🔗 Navigating to ClassPass Login Page...")
+def login():
+    print("🚀 Navigating to ClassPass Login Page")
     driver.get("https://classpass.com/login")
-    time.sleep(5)  # Allow page to load
+    time.sleep(2)
+    
+    # Enter credentials and log in
+    driver.find_element(By.ID, "email").send_keys("your_email")
+    driver.find_element(By.ID, "password").send_keys("your_password")
+    driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
+    
+    print("✅ Logged in successfully")
+    time.sleep(5)  # Wait for new page to load
 
-    # ❌ Step 2: Close Any Popups
+def navigate_to_studio():
+    print("🚀 Opening Studio: Perpetua Fitness")
+    driver.get("https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt")
+    time.sleep(5)
+
+def select_correct_date(target_date):
+    print("📌 Checking available dates on the page...")
+    while True:
+        current_date_element = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']")
+        current_date_text = current_date_element.text.strip()
+        print(f"🔍 Current date on page: {current_date_text}")
+        
+        if current_date_text == target_date:
+            print("✅ Target date found!")
+            break
+        elif current_date_text < target_date:
+            print("➡ Moving to Next Day")
+            driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
+        else:
+            print("⬅ Moving to Previous Day")
+            driver.find_element(By.XPATH, "//button[@aria-label='Previous day']").click()
+        
+        time.sleep(2)  # Wait for the page to update
+
+if __name__ == "__main__":
     try:
-        close_popup = driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Close')]")
-        close_popup.click()
-        print("✅ Closed popup!")
-        time.sleep(2)  # Give it time to close
-    except:
-        print("⚠️ No popup detected, proceeding...")
-
-    # ✅ Step 3: Enter Email & Password
-    print("🔑 Entering login credentials...")
-    email_input = driver.find_element(By.ID, "email")
-    password_input = driver.find_element(By.ID, "password")
-
-    email_input.send_keys("ueberschaer@google.com")
-    password_input.send_keys("Glorchen1992!")
-    password_input.send_keys(Keys.RETURN)
-    time.sleep(5)  # Wait for login to process
-
-    # ✅ Step 4: Verify Login Success
-    if "dashboard" in driver.current_url:
-        print("✅ Login successful!")
-    else:
-        print("❌ Login failed! Check credentials.")
-
-except Exception as e:
-    print(f"❌ Error: {e}")
-
-finally:
-    # Close browser
-    driver.quit()
-    print("🚪 Browser closed.")
+        login()
+        navigate_to_studio()
+        select_correct_date("Thu, Jan 30")  # Example date
+        print("✅ Test Completed")
+    except Exception as e:
+        print(f"❌ Booking failed: {e}")
+    finally:
+        driver.quit()
