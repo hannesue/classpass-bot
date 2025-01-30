@@ -1,8 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import json
-import subprocess
 from datetime import datetime, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 app = Flask(__name__)
 
@@ -11,14 +18,19 @@ JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
 
-# Ensure job & log files exist
+# Ensure log file exists
+if not os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "w") as file:
+        json.dump([], file)
+
+# Ensure job file exists
 if not os.path.exists(JOB_FILE):
     with open(JOB_FILE, "w") as file:
         json.dump([], file)
 
-if not os.path.exists(LOG_FILE):
-    with open(LOG_FILE, "w") as file:
-        json.dump([], file)
+# Set up scheduler
+scheduler = BackgroundScheduler()
+scheduler.start()
 
 # Studio and Class Data
 STUDIOS = {
@@ -29,10 +41,17 @@ STUDIOS = {
             "T&S | GLUTES & ABS",
             "T&S | FULL BODY | INTENSITY",
             "T&S | CHEST, ARMS & ABS",
+            "T&S | FULL BODY | STRENGTH",
+            "T&S | FULL BODY | ALL IN - 60MIN",
+            "T&S | FULL BODY | LOWER BODY FOCUS",
+            "T&S | FULL BODY | LOWER BODY FOCUS - 60MIN",
             "HYROX",
             "RIDE45",
             "RIDE60",
-            "RHYTHM RIDE"
+            "RHYTHM RIDE",
+            "RHYTHM RIDE 60",
+            "RHYTHM RIDE - WEEKEND PRINKS",
+            "RHYTHM RIDE THEME MAGIC MIKE"
         ]
     },
     "Beatbox": {
@@ -41,19 +60,38 @@ STUDIOS = {
             "MUAY THAI FIT Merrion Studio",
             "BOX STRONG - Merrion Studio",
             "KO Leeson Studio",
-            "BOX SWEAT - Merrion Studio"
+            "BOX STRONG Leeson Studio",
+            "BOX SWEAT - Merrion Studio",
+            "HYBRID Merrion Studio",
+            "FLATLINE Leeson Studio",
+            "FLAT LINE * New Merrion Studio",
+            "BOXING PADS - Merrion Studio",
+            "BOXING PADS - Leeson Studio",
+            "KO Merrion Studio",
+            "TECHNICAL BOXING - Merrion Studio",
+            "10 ROUNDS - Leeson Studio",
+            "PILATES Leeson Studio",
+            "FLAT LINE Merrion Studio",
+            "10 ROUNDS - Merrion Studio",
+            "SPARRING Merrion Studio"
         ]
     }
 }
 
-# Generate available dates (next 5 days)
+# Generate the next 5 days for the date dropdown
 def generate_dates():
     today = datetime.today()
     return [(today + timedelta(days=i)).strftime("%a, %b %d") for i in range(4, 9)]
 
-# Generate time slots from 6AM to 8PM in 5-min intervals
+# Time Slots (6 AM to 8 PM in 5-min intervals)
 def generate_time_slots():
-    return [f"{hour}:{minute:02d} {'AM' if hour < 12 else 'PM'}" for hour in range(6, 21) for minute in range(0, 60, 5)]
+    times = []
+    for hour in range(6, 21):  # 6 AM to 8 PM
+        for minute in range(0, 60, 5):
+            am_pm = "AM" if hour < 12 else "PM"
+            display_hour = hour if hour <= 12 else hour - 12
+            times.append(f"{display_hour}:{minute:02d} {am_pm}")
+    return times
 
 @app.route('/')
 def index():
@@ -70,20 +108,18 @@ def schedule_bot():
         "time": request.form['time']
     }
 
-    # Store the booking in jobs.json
+    # Save job
     with open(JOB_FILE, "w") as file:
-        json.dump([job], file)  # Only one job at a time
+        json.dump(job, file)
 
-    # Append booking to logs
+    # Store in logs
     with open(LOG_FILE, "r+") as file:
         logs = json.load(file)
         logs.append({
-            "email": job["email"],
+            "user": job["email"],
             "studio": job["studio"],
             "class_name": job["class_name"],
-            "date": job["date"],
-            "time": job["time"],
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "time": f"{job['date']} {job['time']}"
         })
         file.seek(0)
         json.dump(logs, file)
@@ -93,26 +129,25 @@ def schedule_bot():
 
 @app.route('/logs', methods=['GET'])
 def view_logs():
+    password = request.args.get("password")
+    if password != PASSWORD:
+        return "❌ Access Denied: Invalid password!", 403
+
     with open(LOG_FILE, "r") as file:
         logs = json.load(file)
+    
     return render_template("logs.html", logs=logs)
 
 @app.route('/delete_log', methods=['POST'])
 def delete_log():
+    password = request.form.get("password")
+    if password != PASSWORD:
+        return "❌ Access Denied: Invalid password!", 403
+
     with open(LOG_FILE, "w") as file:
         json.dump([], file)
+
     return jsonify({"message": "✅ Logs cleared successfully!"})
-
-@app.route('/run_booking', methods=['POST'])
-def run_booking():
-    try:
-        # Run test_booking.py manually
-        result = subprocess.run(["python", "test_booking.py"], capture_output=True, text=True)
-        print(result.stdout)  # Print execution logs
-
-        return jsonify({"message": "✅ Booking bot executed manually!"})
-    except Exception as e:
-        return jsonify({"error": f"❌ Error: {e}"}), 500
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
