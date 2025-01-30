@@ -12,8 +12,8 @@ SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.
 
 # Desired capabilities for Sauce Labs
 sauce_options = {
-    "screenResolution": "1920x1080",  # High resolution
-    "name": "ClassPass Bot Test",  # Test name in Sauce Labs dashboard
+    "screenResolution": "1920x1080",  # High resolution for better UI interaction
+    "name": "ClassPass Date Scrolling Test",  # Name of test in Sauce Labs
     "build": "ClassPass_Test_Build"  # Optional build identifier
 }
 
@@ -42,37 +42,27 @@ def navigate_to_studio():
     driver.get("https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt")
     time.sleep(5)
 
-def select_correct_date(target_date):
-    print("📌 Checking available dates on the page...")
-    while True:
+def click_next_day_four_times():
+    print("📌 Clicking 'Next Day' button 4 times...")
+
+    for i in range(4):  # Click "Next Day" 4 times
         try:
-            current_date_element = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']")
-            current_date_text = current_date_element.text.strip()
-            print(f"🔍 Current date on page: {current_date_text}")
-            
-            if current_date_text == target_date:
-                print("✅ Target date found!")
-                break
-            elif current_date_text < target_date:
-                print("➡ Moving to Next Day")
-                driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
-            else:
-                print("⬅ Moving to Previous Day")
-                driver.find_element(By.XPATH, "//button[@aria-label='Previous day']").click()
-            
-            time.sleep(2)  # Wait for the page to update
+            next_day_button = driver.find_element(By.XPATH, "//button[@aria-label='Next day']")
+            next_day_button.click()
+            print(f"➡ Clicked 'Next Day' button {i + 1}/4 times")
+            time.sleep(2)  # Wait for transition
         except Exception as e:
-            print(f"❌ Error selecting date: {e}")
-            break
+            print(f"❌ Error clicking 'Next Day' button: {e}")
+            break  # Stop clicking if button not found
 
 if __name__ == "__main__":
     try:
         login()
         navigate_to_studio()
-        select_correct_date("Mon, Feb 3")  # Selecting February 3rd
+        click_next_day_four_times()  # Test clicking next day 4 times
         print("✅ Test Completed")
     except Exception as e:
-        print(f"❌ Booking failed: {e}")
+        print(f"❌ Test failed: {e}")
     finally:
         driver.quit()
 
