@@ -26,43 +26,30 @@ jobs:
           ngrok --version  # Verify installation
 
       - name: Authenticate Ngrok (REQUIRED)
-        run: |
-          ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+        run: ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
       - name: Start Flask App
         run: |
           python app.py &
-          sleep 15  # Ensure Flask fully starts
+          sleep 5  # Allow Flask to start
 
-      - name: Start Ngrok Tunnel (Persistent Mode)
+      - name: Start Ngrok Tunnel
         run: |
-          nohup ngrok http 5000 --log=ngrok.log > ngrok.out 2>&1 &
-          sleep 15  # Give Ngrok enough time to initialize
-          cat ngrok.out  # Print Ngrok logs for debugging
-
-      - name: Confirm Ngrok is Running
-        run: |
-          if ! pgrep -f "ngrok"; then
-            echo "❌ Ngrok is NOT running! Check logs above."
-            exit 1
-          else
-            echo "✅ Ngrok is running."
-          fi
+          ngrok http 5000 --log=ngrok.log > /dev/null 2>&1 &
+          sleep 10  # Give Ngrok time to initialize
 
       - name: Get Ngrok URL
         run: |
-          sleep 5  # Allow Ngrok to fully initialize
           NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
           if [[ -z "$NGROK_URL" || "$NGROK_URL" == "null" ]]; then
             echo "❌ Ngrok URL not found! Check logs above."
             exit 1
           fi
           echo "🔗 Ngrok Public URL: $NGROK_URL"
-          echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV  # Save to environment
+          echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV
 
-      - name: Test Access to Flask App
-        run: |
-          curl --fail "$NGROK_URL" || echo "❌ Failed to reach Flask app."
-          
-      - name: Keep Workflow Alive for Debugging
-        run: sleep 3600  # Keep the process running for 1 hour
+      - name: Debug Flask & Ngrok
+        run: curl --fail "$NGROK_URL" || echo "❌ Failed to reach Flask app."
+
+      - name: Keep Workflow Running
+        run: sleep 3600  # Keeps it alive for testing
