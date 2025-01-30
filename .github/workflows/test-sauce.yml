@@ -20,6 +20,6 @@ jobs:
 
       - name: Run Booking Test on Sauce Labs
         env:
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          SAUCE_USERNAME: oauth-hannes.ueberschaer-158e3
+          SAUCE_ACCESS_KEY: fc209d59-4f3d-4dc9-aefe-85295608343a
         run: python test_booking.py
