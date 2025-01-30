@@ -7,13 +7,69 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f4; text-align: center; }
         .container { max-width: 400px; margin: auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); }
-        input, button { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        input, select, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
         button { background-color: #007BFF; color: white; border: none; cursor: pointer; }
         button:hover { background-color: #0056b3; }
         #message { display: none; padding: 10px; margin-top: 10px; color: white; background: green; border-radius: 5px; }
-        .log-link { display: block; margin-top: 15px; text-decoration: none; color: #007BFF; font-size: 16px; cursor: pointer; }
+        .log-link { display: block; margin-top: 15px; text-decoration: none; color: #007BFF; }
     </style>
     <script>
+        const classOptions = {
+            "perpetua": [
+                "T&S | FULL BODY | ALL IN", "T&S | GLUTES & ABS", "T&S | FULL BODY | INTENSITY", "T&S | CHEST, ARMS & ABS",
+                "T&S | FULL BODY | STRENGTH", "T&S | FULL BODY | ALL IN - 60MIN", "T&S | FULL BODY | LOWER BODY FOCUS",
+                "T&S | FULL BODY | LOWER BODY FOCUS - 60MIN", "HYROX", "RIDE45", "RIDE60", "RHYTHM RIDE",
+                "RHYTHM RIDE 60", "RHYTHM RIDE - WEEKEND PRINKS", "RHYTHM RIDE THEME MAGIC MIKE"
+            ],
+            "beatbox": [
+                "MUAY THAI FIT Merrion Studio", "BOX STRONG - Merrion Studio", "KO Leeson Studio", "BOX STRONG Leeson Studio",
+                "BOX SWEAT - Merrion Studio", "HYBRID Merrion Studio", "FLATLINE Leeson Studio", "FLAT LINE Merrion Studio",
+                "BOXING PADS - Merrion Studio", "BOXING PADS - Leeson Studio", "KO Merrion Studio", "TECHNICAL BOXING - Merrion Studio",
+                "10 ROUNDS - Leeson Studio", "PILATES Leeson Studio", "FLAT LINE Merrion Studio", "10 ROUNDS - Merrion Studio",
+                "SPARRING Merrion Studio"
+            ]
+        };
+        
+        function updateClassOptions() {
+            const studio = document.getElementById("studio").value;
+            const classDropdown = document.getElementById("class_name");
+            classDropdown.innerHTML = "";
+            classOptions[studio].forEach(className => {
+                let option = document.createElement("option");
+                option.value = className;
+                option.textContent = className;
+                classDropdown.appendChild(option);
+            });
+        }
+        
+        function populateDates() {
+            const dateDropdown = document.getElementById("date");
+            dateDropdown.innerHTML = "";
+            let today = new Date();
+            today.setDate(today.getDate() + 4);
+            for (let i = 0; i < 5; i++) {
+                let option = document.createElement("option");
+                option.value = today.toDateString();
+                option.textContent = today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                dateDropdown.appendChild(option);
+                today.setDate(today.getDate() + 1);
+            }
+        }
+        
+        function populateTimes() {
+            const timeDropdown = document.getElementById("time");
+            timeDropdown.innerHTML = "";
+            for (let hour = 6; hour <= 20; hour++) {
+                for (let minutes = 0; minutes < 60; minutes += 5) {
+                    let option = document.createElement("option");
+                    let formattedTime = `${hour}:${minutes.toString().padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+                    option.value = formattedTime;
+                    option.textContent = formattedTime;
+                    timeDropdown.appendChild(option);
+                }
+            }
+        }
+        
         function scheduleBot(event) {
             event.preventDefault();
             let formData = new FormData(document.getElementById("scheduleForm"));
@@ -25,12 +81,10 @@
                     document.getElementById("scheduleForm").reset();
                 });
         }
-
-        function requestLogAccess() {
-            let password = prompt("Enter password to view logs:");
-            if (password) {
-                window.location.href = "/logs?password=" + encodeURIComponent(password);
-            }
+        
+        window.onload = function () {
+            populateDates();
+            populateTimes();
         }
     </script>
 </head>
@@ -40,13 +94,17 @@
         <form id="scheduleForm" onsubmit="scheduleBot(event)">
             <input type="email" name="email" placeholder="📧 Email" required>
             <input type="password" name="password" placeholder="🔑 Password" required>
-            <input type="text" name="class_name" placeholder="🏋️‍♂️ Class Name" required>
-            <input type="text" name="class_time" placeholder="⏰ Class Time" required>
-            <input type="datetime-local" name="booking_time" required>
+            <select id="studio" name="studio" onchange="updateClassOptions()" required>
+                <option value="perpetua">Perpetua Fitness</option>
+                <option value="beatbox">Beatbox</option>
+            </select>
+            <select id="class_name" name="class_name" required></select>
+            <select id="date" name="date" required></select>
+            <select id="time" name="time" required></select>
             <button type="submit">✅ Schedule Bot</button>
         </form>
         <div id="message"></div>
-        <a onclick="requestLogAccess()" class="log-link">📜 View Logs</a>
+        <a href="/logs?password=DietCoke" class="log-link">📜 View Logs</a>
     </div>
 </body>
 </html>
