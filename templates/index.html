@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClassPass Bot</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f4f4; 
+            text-align: center; 
+            margin: 0; 
+            padding: 20px; 
+        }
         .container { 
             max-width: 500px; 
             margin: auto; 
-            padding: 20px; 
             background: white; 
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); 
+            padding: 20px; 
             border-radius: 10px; 
-            margin-top: 50px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); 
         }
         input, select, button { 
             width: 100%; 
@@ -21,17 +26,21 @@
             margin: 5px 0; 
             border: 1px solid #ccc; 
             border-radius: 5px; 
-            font-size: 16px;
+            font-size: 16px; 
         }
         button { 
             background: #007bff; 
             color: white; 
             cursor: pointer; 
             font-weight: bold; 
-            border: none;
+            border: none; 
         }
         button:hover { background: #0056b3; }
-        #message { display: none; padding: 10px; margin-top: 10px; }
+        #message { 
+            display: none; 
+            padding: 10px; 
+            margin-top: 10px; 
+        }
     </style>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -47,10 +56,12 @@
             const studio = studioSelect.value;
             const classes = {
                 "Perpetua Fitness": [
-                    "T&S | FULL BODY | ALL IN", "T&S | GLUTES & ABS", "T&S | FULL BODY | INTENSITY", "RIDE45", "RHYTHM RIDE"
+                    "T&S | FULL BODY | ALL IN", "T&S | GLUTES & ABS", "T&S | FULL BODY | INTENSITY", 
+                    "RIDE45", "RHYTHM RIDE"
                 ],
                 "Beatbox": [
-                    "MUAY THAI FIT Merrion Studio", "BOX STRONG - Merrion Studio", "KO Leeson Studio", "BOX STRONG Leeson Studio"
+                    "MUAY THAI FIT Merrion Studio", "BOX STRONG - Merrion Studio", "KO Leeson Studio", 
+                    "BOX STRONG Leeson Studio"
                 ]
             };
 
@@ -93,6 +104,13 @@
                 })
                 .catch(error => console.error("❌ Fetch Error:", error));
         }
+
+        function runManualBot() {
+            fetch("/run_bot", { method: "POST" })
+                .then(response => response.json())
+                .then(data => alert(data.message))
+                .catch(error => console.error("❌ Error running bot:", error));
+        }
     </script>
 </head>
 <body>
@@ -122,6 +140,7 @@
             <select name="time" id="timeSelect" required></select>
 
             <button type="submit">Schedule Bot</button>
+            <button type="button" onclick="runManualBot()">Run Bot Manually</button>
         </form>
         <div id="message"></div>
         <a href="/logs?password=DietCoke">View Logs</a>
