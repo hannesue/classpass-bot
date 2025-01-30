@@ -5,16 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClassPass Bot</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        .container { max-width: 400px; margin: auto; padding: 20px; }
-        input, select, button { width: 100%; padding: 10px; margin: 5px 0; }
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; }
+        .container { 
+            max-width: 500px; 
+            margin: auto; 
+            padding: 20px; 
+            background: white; 
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); 
+            border-radius: 10px; 
+            margin-top: 50px;
+        }
+        input, select, button { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 5px; 
+            font-size: 16px;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            cursor: pointer; 
+            font-weight: bold; 
+            border: none;
+        }
+        button:hover { background: #0056b3; }
         #message { display: none; padding: 10px; margin-top: 10px; }
     </style>
     <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            updateClasses();
+            populateTimes();
+        });
+
         function updateClasses() {
             const studioSelect = document.getElementById("studioSelect");
             const classSelect = document.getElementById("classSelect");
-            classSelect.innerHTML = "";  // Clear existing options
+            classSelect.innerHTML = "";  
 
             const studio = studioSelect.value;
             const classes = {
@@ -34,16 +62,31 @@
             });
         }
 
+        function populateTimes() {
+            const timeSelect = document.getElementById("timeSelect");
+            timeSelect.innerHTML = "";  
+
+            for (let hour = 6; hour <= 20; hour++) {
+                for (let minutes = 0; minutes < 60; minutes += 5) {
+                    let displayHour = hour > 12 ? hour - 12 : hour;
+                    let amPm = hour < 12 ? "AM" : "PM";
+                    let timeOption = `${displayHour}:${minutes.toString().padStart(2, '0')} ${amPm}`;
+                    
+                    let option = document.createElement("option");
+                    option.value = timeOption;
+                    option.textContent = timeOption;
+                    timeSelect.appendChild(option);
+                }
+            }
+        }
+
         function scheduleBot(event) {
             event.preventDefault();
             let formData = new FormData(document.getElementById("scheduleForm"));
 
-            console.log("📤 Sending Form Data:", Object.fromEntries(formData));
-
             fetch("/schedule", { method: "POST", body: formData })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("✅ Server Response:", data);
                     document.getElementById("message").innerText = data.message || data.error;
                     document.getElementById("message").style.display = "block";
                     document.getElementById("scheduleForm").reset();
@@ -59,24 +102,24 @@
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
 
+            <label>Studio:</label>
             <select name="studio" id="studioSelect" onchange="updateClasses()" required>
                 <option value="Perpetua Fitness">Perpetua Fitness</option>
                 <option value="Beatbox">Beatbox</option>
             </select>
 
+            <label>Class:</label>
             <select name="class_name" id="classSelect" required></select>
 
+            <label>Date:</label>
             <select name="date" id="dateSelect" required>
                 <option value="Thu, Feb 1">Thu, Feb 1</option>
                 <option value="Fri, Feb 2">Fri, Feb 2</option>
                 <option value="Sat, Feb 3">Sat, Feb 3</option>
             </select>
 
-            <select name="time" id="timeSelect" required>
-                <option value="6:30 AM">6:30 AM</option>
-                <option value="7:00 AM">7:00 AM</option>
-                <option value="7:30 AM">7:30 AM</option>
-            </select>
+            <label>Time:</label>
+            <select name="time" id="timeSelect" required></select>
 
             <button type="submit">Schedule Bot</button>
         </form>
