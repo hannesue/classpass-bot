@@ -103,6 +103,7 @@ def schedule_bot():
         "email": request.form['email'],
         "password": request.form['password'],
         "studio": request.form['studio'],
+        "studio_url": STUDIOS[request.form['studio']]['url'],
         "class_name": request.form['class_name'],
         "date": request.form['date'],
         "time": request.form['time']
@@ -118,6 +119,7 @@ def schedule_bot():
         logs.append({
             "user": job["email"],
             "studio": job["studio"],
+            "studio_url": job["studio_url"],
             "class_name": job["class_name"],
             "time": f"{job['date']} {job['time']}"
         })
