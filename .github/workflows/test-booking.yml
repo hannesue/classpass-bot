@@ -4,7 +4,7 @@ on:
   workflow_dispatch:  # Allows manual execution
 
 jobs:
-  test-booking:
+  run-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -16,21 +16,27 @@ jobs:
           python-version: 3.11
 
       - name: Install Dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install selenium webdriver-manager
+        run: pip install -r requirements.txt
 
       - name: Install Chrome & ChromeDriver
         run: |
           sudo apt update
-          sudo apt install -y wget curl unzip xvfb libxi6 libgconf-2-4
-          sudo apt install -y chromium-browser
+          sudo apt install -y wget curl unzip xvfb chromium-browser
+          
+          # Get Chrome version
           CHROME_VERSION=$(chromium-browser --version | awk '{print $2}')
-          wget -q "https://chromedriver.storage.googleapis.com/$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE)/chromedriver_linux64.zip"
+          
+          # Get compatible ChromeDriver version
+          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+          echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
+
+          # Download & Install ChromeDriver
+          wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
           unzip chromedriver_linux64.zip
           sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-          echo "✅ Chrome and ChromeDriver installed"
+          sudo chmod +x /usr/local/bin/
+          
+          echo "✅ Chrome & ChromeDriver installed successfully!"
 
-      - name: Run Booking Test
-        run: python test_booking.py
+      - name: Run ClassPass Booking Test
+        run: python test_booking.py  # Make sure this script is correctly set up to test Selenium actions
