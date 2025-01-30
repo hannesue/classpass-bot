@@ -1,138 +1,113 @@
+import os
 import time
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
-# Test Credentials (replace with real ones when needed)
-EMAIL = "your_email@example.com"
-PASSWORD = "your_password"
+# ✅ Get credentials securely from GitHub Actions secrets
+SAUCE_USERNAME = os.getenv("oauth-hannes.ueberschaer-158e3")
+SAUCE_ACCESS_KEY = os.getenv("fc209d59-4f3d-4dc9-aefe-85295608343a")
 
-# Test Booking Details
+# ✅ Sauce Labs Remote WebDriver URL
+SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.saucelabs.com:443/wd/hub"
+
+# ✅ Set up the desired capabilities for running on Sauce Labs
+capabilities = {
+    "browserName": "chrome",
+    "browserVersion": "latest",
+    "platformName": "Windows 10",
+    "sauce:options": {}
+}
+
+# ✅ Open Sauce Labs Remote Browser
+print("🚀 Connecting to Sauce Labs...")
+driver = webdriver.Remote(command_executor=SAUCE_URL, desired_capabilities=capabilities)
+
+# ✅ ClassPass Login Details
+CLASS_PASS_URL = "https://classpass.com/login"
+EMAIL = os.getenv("CLASSPASS_EMAIL")  # Store email in GitHub Secrets
+PASSWORD = os.getenv("CLASSPASS_PASSWORD")  # Store password in GitHub Secrets
+
+# ✅ Booking Details
 STUDIO_URL = "https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt"
 CLASS_NAME = "RIDE45"
-CLASS_TIME = "7:15 AM"
-TARGET_DATE = "Fri, Feb 2"  # Change dynamically based on your test case
+BOOKING_DATE = "Sun, Feb 2"
+BOOKING_TIME = "7:15 AM"
 
-# Initialize WebDriver
-def start_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
+try:
+    # ✅ Step 1: Open ClassPass
+    print("🚀 Navigating to ClassPass Login Page")
+    driver.get(CLASS_PASS_URL)
+    driver.maximize_window()
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "email")))
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    return driver
+    # ✅ Step 2: Log In
+    email_input = driver.find_element(By.NAME, "email")
+    email_input.send_keys(EMAIL)
 
-# Function to log in to ClassPass
-def login(driver):
-    try:
-        print("🚀 Navigating to ClassPass Login Page")
-        driver.get("https://classpass.com/")
+    password_input = driver.find_element(By.NAME, "password")
+    password_input.send_keys(PASSWORD)
+    password_input.send_keys(Keys.RETURN)
 
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(EMAIL)
-        driver.find_element(By.ID, "password").send_keys(PASSWORD)
-        driver.find_element(By.ID, "password").submit()
+    print("✅ Logged in successfully")
+    time.sleep(5)  # Wait for login to complete
 
-        print("✅ Logged in successfully")
-        time.sleep(5)  # Allow time for login redirect
-    except Exception as e:
-        print(f"❌ Login Failed: {e}")
-
-# Function to select the correct date
-def select_date(driver, target_date):
-    try:
-        print("📌 Checking available dates on the page...")
-
-        # Find all available date elements
-        date_elements = driver.find_elements(By.XPATH, "//button[contains(@aria-label, 'Select date')]")
-
-        # Print the dates found
-        for el in date_elements:
-            print(f"📅 Found Date on Page: {el.text.strip()}")
-
-        # Check if the correct date is already selected
-        current_date_element = driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Select date')]")
-        current_date = current_date_element.text.strip()
-
-        print(f"📆 Current Date on Page: {current_date} | Target Date: {target_date}")
-
-        if not current_date:
-            print("❌ ERROR: No date found on the page. The page structure may have changed.")
-            return False
-
-        # Click forward or backward until the correct date appears
-        while current_date != target_date:
-            if target_date > current_date:
-                print("➡ Clicking next day...")
-                next_button = driver.find_element(By.XPATH, "//button[@aria-label='Next day']")
-                next_button.click()
-            else:
-                print("⬅ Clicking previous day...")
-                prev_button = driver.find_element(By.XPATH, "//button[@aria-label='Previous day']")
-                prev_button.click()
-
-            # Wait for page update
-            WebDriverWait(driver, 5).until(
-                EC.text_to_be_present_in_element((By.XPATH, "//button[contains(@aria-label, 'Select date')]"), target_date)
-            )
-
-            current_date = driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Select date')]").text.strip()
-
-        print("✅ Date Selected Successfully!")
-        return True
-
-    except Exception as e:
-        print(f"❌ Error selecting date: {e}")
-        return False
-
-# Function to book the class
-def book_class(driver, class_name, class_time):
-    try:
-        print(f"🔍 Searching for class: {class_name} at {class_time}")
-
-        # Find all class listings
-        class_elements = driver.find_elements(By.XPATH, "//div[contains(text(), 'credits')]")
-
-        # Print all classes found
-        for el in class_elements:
-            print(f"📌 Found Class: {el.text.strip()}")
-
-        # Look for the class with the correct name and time
-        class_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{class_time}')]/following-sibling::div[contains(text(), '{class_name}')]"))
-        )
-
-        # Find the corresponding booking button
-        booking_button = class_element.find_element(By.XPATH, "./following-sibling::div//button[contains(text(), 'credits')]")
-
-        # Click booking button
-        booking_button.click()
-
-        print(f"✅ Successfully booked {class_name} at {class_time}!")
-        return True
-
-    except Exception as e:
-        print(f"❌ Booking failed: {e}")
-        return False
-
-# Main execution
-def main():
-    driver = start_driver()
-    login(driver)
-
+    # ✅ Step 3: Open Studio URL
     print(f"🚀 Opening Studio: {STUDIO_URL}")
     driver.get(STUDIO_URL)
-    time.sleep(5)  # Allow page to load
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
 
-    if select_date(driver, TARGET_DATE):
-        book_class(driver, CLASS_NAME, CLASS_TIME)
+    # ✅ Step 4: Navigate to the correct date
+    print("📌 Checking available dates on the page...")
+    date_element = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, "//button[contains(@class, 'DateBar-date')]"))
+    )
+    current_date = date_element.text.strip()
 
+    while current_date != BOOKING_DATE:
+        if current_date < BOOKING_DATE:
+            # Click "Next Day" button
+            next_button = driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Next day')]")
+            next_button.click()
+        else:
+            # Click "Previous Day" button
+            prev_button = driver.find_element(By.XPATH, "//button[contains(@aria-label, 'Previous day')]")
+            prev_button.click()
+
+        time.sleep(2)
+        date_element = driver.find_element(By.XPATH, "//button[contains(@class, 'DateBar-date')]")
+        current_date = date_element.text.strip()
+
+    print(f"✅ Date selected: {current_date}")
+
+    # ✅ Step 5: Find and Book the Class
+    print(f"🔍 Searching for class: {CLASS_NAME} at {BOOKING_TIME}")
+    class_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'Schedule-class')]")
+
+    for class_element in class_elements:
+        class_title = class_element.find_element(By.XPATH, ".//h3").text.strip()
+        class_time = class_element.find_element(By.XPATH, ".//time").text.strip()
+
+        if class_title == CLASS_NAME and class_time == BOOKING_TIME:
+            print("✅ Class found! Clicking 'Book' button...")
+            book_button = class_element.find_element(By.XPATH, ".//button[contains(text(), 'credits')]")
+            book_button.click()
+            break
+    else:
+        print("❌ Class Not Found")
+
+    # ✅ Step 6: Confirm Booking
+    confirm_button = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Confirm')]"))
+    )
+    confirm_button.click()
+    print("✅ Booking Completed!")
+
+except Exception as e:
+    print(f"❌ Booking failed: {e}")
+
+finally:
     print("✅ Test Completed")
     driver.quit()
-
-if __name__ == "__main__":
-    main()
