@@ -7,8 +7,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # ✅ Get credentials securely from GitHub Actions secrets
-SAUCE_USERNAME = os.getenv("oauth-hannes.ueberschaer-158e3")
-SAUCE_ACCESS_KEY = os.getenv("fc209d59-4f3d-4dc9-aefe-85295608343a")
+SAUCE_USERNAME = "oauth-hannes.ueberschaer-158e3"
+SAUCE_ACCESS_KEY = "fc209d59-4f3d-4dc9-aefe-85295608343a"
 
 # ✅ Sauce Labs Remote WebDriver URL
 SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.saucelabs.com:443/wd/hub"
