@@ -12,17 +12,23 @@ SAUCE_USERNAME = "oauth-hannes.ueberschaer-158e3"
 SAUCE_ACCESS_KEY = "fc209d59-4f3d-4dc9-aefe-85295608343a"
 SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.saucelabs.com/wd/hub"
 
-# Desired capabilities for Sauce Labs
 desired_capabilities = {
     "browserName": "chrome",
     "browserVersion": "latest",
-    "platformName": "Windows 10"
+    "platformName": "Windows 10",
+    "sauce:options": {
+        "screenResolution": "1920x1080"  # Set resolution to Full HD
+    }
 }
 
-# Start WebDriver
+
+# Start WebDriver with high resolution
 print("🚀 Connecting to Sauce Labs...")
-driver = webdriver.Remote(command_executor=SAUCE_URL, options=webdriver.ChromeOptions())
-wait = WebDriverWait(driver, 10)  # Wait for elements
+driver = webdriver.Remote(
+    command_executor=SAUCE_URL,
+    desired_capabilities=desired_capabilities
+)
+wait = WebDriverWait(driver, 10)
 
 def login():
     """ Logs into ClassPass """
