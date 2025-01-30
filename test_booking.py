@@ -1,4 +1,3 @@
-   
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -49,27 +48,24 @@ def find_and_select_date(target_date):
     """
     print(f"📌 Looking for target date: {target_date}")
 
-    while True:
+    for _ in range(10):  # Maximum 10 attempts to find the correct date
         try:
             # Get the currently displayed date
             current_date_element = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']")
             current_date_text = current_date_element.text.strip()
-            print(f"🔍 Current displayed date: {current_date_text}")
+
+            print(f"🔍 Extracted Date from Page: '{current_date_text}' (vs. Target: '{target_date}')")
 
             if current_date_text == target_date:
                 print("✅ Target date found!")
-                break  # Exit loop if the correct date is displayed
+                return  # Exit function if the correct date is displayed
 
-            elif current_date_text < target_date:
-                print("➡ Moving to Next Day")
-                next_button = driver.find_element(By.XPATH, "//button[@aria-label='Next day']")
-                next_button.click()
-            else:
-                print("⬅ Moving to Previous Day")
-                prev_button = driver.find_element(By.XPATH, "//button[@aria-label='Previous day']")
-                prev_button.click()
+            print("➡ Clicking 'Next Day' button to move forward...")
+            next_button = driver.find_element(By.XPATH, "//button[@aria-label='Next day']")
+            driver.execute_script("arguments[0].click();", next_button)
 
             time.sleep(2)  # Allow time for page transition
+
         except Exception as e:
             print(f"❌ Error finding or clicking date: {e}")
             break  # Stop loop on failure
