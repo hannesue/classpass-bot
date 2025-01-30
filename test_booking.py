@@ -7,7 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
-# Sauce Labs credentials (replace with actual credentials)
+# Sauce Labs credentials (replace with your actual credentials)
 SAUCE_USERNAME = "oauth-hannes.ueberschaer-158e3"
 SAUCE_ACCESS_KEY = "fc209d59-4f3d-4dc9-aefe-85295608343a"
 SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.saucelabs.com/wd/hub"
@@ -22,7 +22,7 @@ desired_capabilities = {
 # Start WebDriver
 print("🚀 Connecting to Sauce Labs...")
 driver = webdriver.Remote(command_executor=SAUCE_URL, options=webdriver.ChromeOptions())
-wait = WebDriverWait(driver, 10)  # Global wait for elements
+wait = WebDriverWait(driver, 10)  # Wait for elements
 
 def login():
     """ Logs into ClassPass """
@@ -30,8 +30,8 @@ def login():
     driver.get("https://classpass.com/login")
     time.sleep(2)
     
-    wait.until(EC.presence_of_element_located((By.ID, "email"))).send_keys("ueberschaer@google.com")
-    wait.until(EC.presence_of_element_located((By.ID, "password"))).send_keys("Glorchen1992!")
+    wait.until(EC.presence_of_element_located((By.ID, "email"))).send_keys("your_email")
+    wait.until(EC.presence_of_element_located((By.ID, "password"))).send_keys("your_password")
     wait.until(EC.presence_of_element_located((By.ID, "password"))).send_keys(Keys.RETURN)
     
     print("✅ Logged in successfully")
@@ -47,51 +47,60 @@ def get_current_date():
     """ Extracts the currently selected date from the webpage """
     try:
         current_date_element = wait.until(EC.presence_of_element_located((By.XPATH, "//div[@data-qa='DateBar.date']")))
-        return current_date_element.text.strip()
+        current_date_text = current_date_element.text.strip()
+        print(f"🔍 Found Date: {current_date_text}")
+        return current_date_text
     except Exception as e:
-        print(f"❌ Failed to get current date: {e}")
+        print(f"❌ Could not get the current date: {e}")
         return None
 
 def select_correct_date(target_date):
     """ Scrolls left/right until the target date is found """
-    print("📌 Checking available dates on the page...")
+    print("📌 Searching for date...")
 
-    while True:
+    for _ in range(10):  # Avoid infinite loops
         current_date_text = get_current_date()
 
         if current_date_text is None:
-            print("❌ Could not retrieve the current date, stopping.")
+            print("❌ No date found, stopping.")
             break
-
-        print(f"🔍 Current date on page: {current_date_text}")
 
         if current_date_text == target_date:
             print("✅ Target date found!")
-            break
+            return True
 
         try:
             if current_date_text < target_date:
-                print("➡ Moving to Next Day")
+                print("➡ Clicking 'Next Day'")
                 next_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Next day']")))
                 driver.execute_script("arguments[0].click();", next_button)
             else:
-                print("⬅ Moving to Previous Day")
+                print("⬅ Clicking 'Previous Day'")
                 prev_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[@aria-label='Previous day']")))
                 driver.execute_script("arguments[0].click();", prev_button)
 
-            time.sleep(2)  # Wait for the page to update
+            time.sleep(2)  # Wait for the date to update
         except Exception as e:
             print(f"❌ Error moving to date: {e}")
             break
+
+    print("❌ Could not find the target date.")
+    return False
 
 if __name__ == "__main__":
     try:
         login()
         navigate_to_studio()
-        select_correct_date("Mon, Feb 3")  # Selecting February 3rd
+        success = select_correct_date("Mon, Feb 3")  # Selecting February 3rd
+
+        if success:
+            print("🎯 Date selection successful!")
+        else:
+            print("❌ Date selection failed!")
+
         print("✅ Test Completed")
     except Exception as e:
-        print(f"❌ Booking failed: {e}")
+        print(f"❌ Test failed: {e}")
     finally:
         driver.quit()
 
