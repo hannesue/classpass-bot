@@ -27,8 +27,8 @@ def login():
     time.sleep(2)
     
     # Enter credentials and log in
-    driver.find_element(By.ID, "email").send_keys("your_email")
-    driver.find_element(By.ID, "password").send_keys("your_password")
+    driver.find_element(By.ID, "email").send_keys("ueberschaer@google.com")
+    driver.find_element(By.ID, "password").send_keys("Glorchen1992!")
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
     
     print("✅ Logged in successfully")
@@ -42,27 +42,31 @@ def navigate_to_studio():
 def select_correct_date(target_date):
     print("📌 Checking available dates on the page...")
     while True:
-        current_date_element = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']")
-        current_date_text = current_date_element.text.strip()
-        print(f"🔍 Current date on page: {current_date_text}")
-        
-        if current_date_text == target_date:
-            print("✅ Target date found!")
+        try:
+            current_date_element = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']")
+            current_date_text = current_date_element.text.strip()
+            print(f"🔍 Current date on page: {current_date_text}")
+            
+            if current_date_text == target_date:
+                print("✅ Target date found!")
+                break
+            elif current_date_text < target_date:
+                print("➡ Moving to Next Day")
+                driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
+            else:
+                print("⬅ Moving to Previous Day")
+                driver.find_element(By.XPATH, "//button[@aria-label='Previous day']").click()
+            
+            time.sleep(2)  # Wait for the page to update
+        except Exception as e:
+            print(f"❌ Error selecting date: {e}")
             break
-        elif current_date_text < target_date:
-            print("➡ Moving to Next Day")
-            driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
-        else:
-            print("⬅ Moving to Previous Day")
-            driver.find_element(By.XPATH, "//button[@aria-label='Previous day']").click()
-        
-        time.sleep(2)  # Wait for the page to update
 
 if __name__ == "__main__":
     try:
         login()
         navigate_to_studio()
-        select_correct_date("Thu, Jan 30")  # Example date
+        select_correct_date("Mon, Feb 3")  # Selecting February 3rd
         print("✅ Test Completed")
     except Exception as e:
         print(f"❌ Booking failed: {e}")
