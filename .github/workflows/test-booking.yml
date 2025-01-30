@@ -18,25 +18,22 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-      - name: Install Chrome & ChromeDriver
+      - name: Install Chrome & ChromeDriver (Fixed)
         run: |
           sudo apt update
           sudo apt install -y wget curl unzip xvfb chromium-browser
-          
-          # Get Chrome version
-          CHROME_VERSION=$(chromium-browser --version | awk '{print $2}')
-          
-          # Get compatible ChromeDriver version
-          CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
-          echo "Using ChromeDriver version: $CHROMEDRIVER_VERSION"
+
+          # Manually specify the latest working ChromeDriver version
+          CHROMEDRIVER_VERSION="122.0.6261.111"
+          echo "Using fixed ChromeDriver version: $CHROMEDRIVER_VERSION"
 
           # Download & Install ChromeDriver
-          wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/
+          wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip"
+          unzip chromedriver-linux64.zip
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
           
           echo "✅ Chrome & ChromeDriver installed successfully!"
 
       - name: Run ClassPass Booking Test
-        run: python test_booking.py  # Make sure this script is correctly set up to test Selenium actions
+        run: python test_booking.py  # Ensure this script correctly performs Selenium actions
