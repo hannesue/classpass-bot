@@ -3,69 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClassPass Bot</title>
+    <title>ClassPass Bot Scheduler</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
             background-color: #f4f4f4; 
             text-align: center; 
-            margin: 0; 
-            padding: 20px; 
         }
         .container { 
-            max-width: 500px; 
+            max-width: 400px; 
             margin: auto; 
-            background: white; 
             padding: 20px; 
+            background: white; 
             border-radius: 10px; 
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); 
         }
         input, select, button { 
-            width: 100%; 
+            width: 90%; 
             padding: 10px; 
-            margin: 5px 0; 
-            border: 1px solid #ccc; 
+            margin: 10px 0; 
             border-radius: 5px; 
-            font-size: 16px; 
+            border: 1px solid #ccc; 
+            box-sizing: border-box; 
+            text-align: center;
         }
         button { 
-            background: #007bff; 
+            background-color: #007BFF; 
             color: white; 
-            cursor: pointer; 
-            font-weight: bold; 
             border: none; 
+            cursor: pointer; 
         }
-        button:hover { background: #0056b3; }
+        button:hover { background-color: #0056b3; }
         #message { 
             display: none; 
             padding: 10px; 
             margin-top: 10px; 
+            color: white; 
+            background: green; 
+            border-radius: 5px; 
+        }
+        .log-link { 
+            display: block; 
+            margin-top: 15px; 
+            text-decoration: none; 
+            color: #007BFF; 
+            font-size: 16px; 
+            cursor: pointer; 
         }
     </style>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             updateClasses();
+            populateDates();
             populateTimes();
         });
 
         function updateClasses() {
             const studioSelect = document.getElementById("studioSelect");
             const classSelect = document.getElementById("classSelect");
-            classSelect.innerHTML = "";  
+            classSelect.innerHTML = "";
 
-            const studio = studioSelect.value;
-            const classes = {
+            const studios = {
                 "Perpetua Fitness": [
-                    "T&S | FULL BODY | ALL IN", "T&S | GLUTES & ABS", "T&S | FULL BODY | INTENSITY", 
-                    "RIDE45", "RHYTHM RIDE"
+                    "T&S | FULL BODY | ALL IN", "T&S | GLUTES & ABS", "T&S | FULL BODY | INTENSITY",
+                    "T&S | CHEST, ARMS & ABS", "T&S | FULL BODY | STRENGTH", "T&S | FULL BODY | ALL IN - 60MIN",
+                    "T&S | FULL BODY | LOWER BODY FOCUS", "T&S | FULL BODY | LOWER BODY FOCUS - 60MIN",
+                    "HYROX", "RIDE45", "RIDE60", "RHYTHM RIDE", "RHYTHM RIDE 60",
+                    "RHYTHM RIDE - WEEKEND PRINKS", "RHYTHM RIDE THEME MAGIC MIKE"
                 ],
                 "Beatbox": [
-                    "MUAY THAI FIT Merrion Studio", "BOX STRONG - Merrion Studio", "KO Leeson Studio", 
-                    "BOX STRONG Leeson Studio"
+                    "MUAY THAI FIT Merrion Studio", "BOX STRONG - Merrion Studio", "KO Leeson Studio",
+                    "BOX STRONG Leeson Studio", "BOX SWEAT - Merrion Studio", "HYBRID Merrion Studio",
+                    "FLATLINE Leeson Studio", "FLAT LINE * New Merrion Studio", "BOXING PADS - Merrion Studio",
+                    "BOXING PADS - Leeson Studio", "KO Merrion Studio", "TECHNICAL BOXING - Merrion Studio",
+                    "10 ROUNDS - Leeson Studio", "PILATES Leeson Studio", "FLAT LINE Merrion Studio",
+                    "10 ROUNDS - Merrion Studio", "SPARRING Merrion Studio"
                 ]
             };
 
-            classes[studio].forEach(cls => {
+            studios[studioSelect.value].forEach(cls => {
                 const option = document.createElement("option");
                 option.value = cls;
                 option.textContent = cls;
@@ -73,16 +89,34 @@
             });
         }
 
+        function populateDates() {
+            const dateSelect = document.getElementById("dateSelect");
+            dateSelect.innerHTML = "";
+            
+            let today = new Date();
+            for (let i = 4; i < 9; i++) {
+                let date = new Date();
+                date.setDate(today.getDate() + i);
+                
+                let formattedDate = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+                let option = document.createElement("option");
+                option.value = formattedDate;
+                option.textContent = formattedDate;
+                dateSelect.appendChild(option);
+            }
+        }
+
         function populateTimes() {
             const timeSelect = document.getElementById("timeSelect");
-            timeSelect.innerHTML = "";  
-
+            timeSelect.innerHTML = "";
+            
             for (let hour = 6; hour <= 20; hour++) {
                 for (let minutes = 0; minutes < 60; minutes += 5) {
                     let displayHour = hour > 12 ? hour - 12 : hour;
                     let amPm = hour < 12 ? "AM" : "PM";
                     let timeOption = `${displayHour}:${minutes.toString().padStart(2, '0')} ${amPm}`;
-                    
+
                     let option = document.createElement("option");
                     option.value = timeOption;
                     option.textContent = timeOption;
@@ -111,39 +145,38 @@
                 .then(data => alert(data.message))
                 .catch(error => console.error("❌ Error running bot:", error));
         }
+
+        function requestLogAccess() {
+            let password = prompt("Enter password to view logs:");
+            if (password) {
+                window.location.href = "/logs?password=" + encodeURIComponent(password);
+            }
+        }
     </script>
 </head>
 <body>
     <div class="container">
-        <h1>ClassPass Bot Scheduler</h1>
+        <h1>📅 ClassPass Bot Scheduler</h1>
         <form id="scheduleForm" onsubmit="scheduleBot(event)">
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
+            <input type="email" name="email" placeholder="📧 Email" required>
+            <input type="password" name="password" placeholder="🔑 Password" required>
 
-            <label>Studio:</label>
             <select name="studio" id="studioSelect" onchange="updateClasses()" required>
                 <option value="Perpetua Fitness">Perpetua Fitness</option>
                 <option value="Beatbox">Beatbox</option>
             </select>
 
-            <label>Class:</label>
             <select name="class_name" id="classSelect" required></select>
 
-            <label>Date:</label>
-            <select name="date" id="dateSelect" required>
-                <option value="Thu, Feb 1">Thu, Feb 1</option>
-                <option value="Fri, Feb 2">Fri, Feb 2</option>
-                <option value="Sat, Feb 3">Sat, Feb 3</option>
-            </select>
+            <select name="date" id="dateSelect" required></select>
 
-            <label>Time:</label>
             <select name="time" id="timeSelect" required></select>
 
-            <button type="submit">Schedule Bot</button>
-            <button type="button" onclick="runManualBot()">Run Bot Manually</button>
+            <button type="submit">✅ Schedule Bot</button>
+            <button type="button" onclick="runManualBot()">🚀 Run Bot Manually</button>
         </form>
         <div id="message"></div>
-        <a href="/logs?password=DietCoke">View Logs</a>
+        <a onclick="requestLogAccess()" class="log-link">📜 View Logs</a>
     </div>
 </body>
 </html>
