@@ -154,10 +154,61 @@ def delete_log():
 @app.route('/run_bot', methods=['POST'])
 def run_bot_manually():
     try:
+        print("🚀 Running bot manually...")
         start_bot()
         return jsonify({"message": "✅ Bot executed successfully!"})
     except Exception as e:
+        print(f"❌ Error running bot: {e}")  # Print error to logs
         return jsonify({"error": f"❌ Error running bot: {str(e)}"}), 500
+
+# Function to start the bot
+def start_bot():
+    try:
+        with open(JOB_FILE, "r") as file:
+            job = json.load(file)
+
+        print(f"🚀 Starting bot for user {job['email']}")
+
+        # Set up Selenium WebDriver
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        
+        # Open ClassPass login page
+        driver.get("https://classpass.com/login")
+
+        # Login
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(job["email"])
+        driver.find_element(By.ID, "password").send_keys(job["password"])
+        driver.find_element(By.ID, "password").submit()
+        print("✅ Logged in successfully!")
+
+        # Open Studio Page
+        driver.get(job["studio_url"])
+        print(f"🚀 Navigated to studio: {job['studio_url']}")
+
+        # Select Class Date
+        print(f"📅 Searching for date: {job['date']}")
+        while True:
+            current_date = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']").text.strip()
+            if current_date == job["date"]:
+                print("✅ Correct date found!")
+                break
+            driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
+        
+        # Find Class and Click Booking Button
+        print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
+        class_element = driver.find_element(By.XPATH, f"//h3[contains(text(), '{job['class_name']}')]/../..//time/span[contains(text(), '{job['time']}')]")
+        book_button = class_element.find_element(By.XPATH, "./following-sibling::div//button[contains(@aria-label, 'Reserve')]")
+        book_button.click()
+        print("✅ Class booked successfully!")
+
+        driver.quit()
+    except Exception as e:
+        print(f"❌ Error during booking: {e}")
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
