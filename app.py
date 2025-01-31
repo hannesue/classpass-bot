@@ -1,12 +1,14 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import json
+import time
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
@@ -40,18 +42,8 @@ STUDIOS = {
             "T&S | FULL BODY | ALL IN",
             "T&S | GLUTES & ABS",
             "T&S | FULL BODY | INTENSITY",
-            "T&S | CHEST, ARMS & ABS",
-            "T&S | FULL BODY | STRENGTH",
-            "T&S | FULL BODY | ALL IN - 60MIN",
-            "T&S | FULL BODY | LOWER BODY FOCUS",
-            "T&S | FULL BODY | LOWER BODY FOCUS - 60MIN",
-            "HYROX",
             "RIDE45",
-            "RIDE60",
-            "RHYTHM RIDE",
-            "RHYTHM RIDE 60",
-            "RHYTHM RIDE - WEEKEND PRINKS",
-            "RHYTHM RIDE THEME MAGIC MIKE"
+            "RHYTHM RIDE"
         ]
     },
     "Beatbox": {
@@ -60,20 +52,7 @@ STUDIOS = {
             "MUAY THAI FIT Merrion Studio",
             "BOX STRONG - Merrion Studio",
             "KO Leeson Studio",
-            "BOX STRONG Leeson Studio",
-            "BOX SWEAT - Merrion Studio",
-            "HYBRID Merrion Studio",
-            "FLATLINE Leeson Studio",
-            "FLAT LINE * New Merrion Studio",
-            "BOXING PADS - Merrion Studio",
-            "BOXING PADS - Leeson Studio",
-            "KO Merrion Studio",
-            "TECHNICAL BOXING - Merrion Studio",
-            "10 ROUNDS - Leeson Studio",
-            "PILATES Leeson Studio",
-            "FLAT LINE Merrion Studio",
-            "10 ROUNDS - Merrion Studio",
-            "SPARRING Merrion Studio"
+            "BOX STRONG Leeson Studio"
         ]
     }
 }
@@ -121,7 +100,8 @@ def schedule_bot():
             "studio": job["studio"],
             "studio_url": job["studio_url"],
             "class_name": job["class_name"],
-            "time": f"{job['date']} {job['time']}"
+            "time": f"{job['date']} {job['time']}",
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
         file.seek(0)
         json.dump(logs, file)
@@ -157,7 +137,74 @@ def run_bot_manually():
         start_bot()
         return jsonify({"message": "✅ Bot executed successfully!"})
     except Exception as e:
+        print(f"❌ Error running bot: {e}")
         return jsonify({"error": f"❌ Error running bot: {str(e)}"}), 500
+
+def start_bot():
+    try:
+        with open(JOB_FILE, "r") as file:
+            job = json.load(file)
+
+        print("🚀 Starting Bot...")
+
+        # Set up Selenium WebDriver
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver.get("https://classpass.com/login")
+
+        print("🔑 Logging in...")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(job["email"])
+        driver.find_element(By.ID, "password").send_keys(job["password"])
+        driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
+
+        time.sleep(5)
+
+        # Open studio page
+        print(f"🚀 Opening studio page: {job['studio_url']}")
+        driver.get(job["studio_url"])
+        time.sleep(5)
+
+        # Select Date
+        print(f"📆 Selecting Date: {job['date']}")
+        while True:
+            current_date = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']").text.strip()
+            if current_date == job["date"]:
+                break
+            driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
+            time.sleep(2)
+
+        print("✅ Date Selected Successfully!")
+
+        # Select Class
+        print(f"🔍 Searching for class: {job['class_name']} at {job['time']}...")
+        class_rows = driver.find_elements(By.XPATH, "//section[@data-component='Section']")
+        for row in class_rows:
+            class_time = row.find_element(By.XPATH, ".//time").text.strip()
+            class_name = row.find_element(By.XPATH, ".//h3").text.strip()
+
+            if class_time == job["time"] and class_name == job["class_name"]:
+                print("✅ Class Found! Booking now...")
+                row.find_element(By.XPATH, ".//button[contains(@aria-label, 'Reserve')]").click()
+                time.sleep(3)
+
+                # Confirm reservation
+                print("📝 Confirming Reservation...")
+                WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[@data-qa='Inquiry.reserve-button']"))
+                ).click()
+
+                print("🎉 Booking Confirmed!")
+                break
+
+        driver.quit()
+        print("✅ Bot execution completed!")
+
+    except Exception as e:
+        print(f"❌ Error during booking: {e}")
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
