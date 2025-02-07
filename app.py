@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import json
+import subprocess
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from selenium import webdriver
@@ -26,7 +27,7 @@ if not os.path.exists(LOG_FILE):
 # Ensure job file exists
 if not os.path.exists(JOB_FILE):
     with open(JOB_FILE, "w") as file:
-        json.dump([], file)
+        json.dump({}, file)
 
 # Set up scheduler
 scheduler = BackgroundScheduler()
@@ -42,16 +43,10 @@ STUDIOS = {
             "T&S | FULL BODY | INTENSITY",
             "T&S | CHEST, ARMS & ABS",
             "T&S | FULL BODY | STRENGTH",
-            "T&S | FULL BODY | ALL IN - 60MIN",
-            "T&S | FULL BODY | LOWER BODY FOCUS",
-            "T&S | FULL BODY | LOWER BODY FOCUS - 60MIN",
             "HYROX",
             "RIDE45",
             "RIDE60",
             "RHYTHM RIDE",
-            "RHYTHM RIDE 60",
-            "RHYTHM RIDE - WEEKEND PRINKS",
-            "RHYTHM RIDE THEME MAGIC MIKE"
         ]
     },
     "Beatbox": {
@@ -60,20 +55,9 @@ STUDIOS = {
             "MUAY THAI FIT Merrion Studio",
             "BOX STRONG - Merrion Studio",
             "KO Leeson Studio",
-            "BOX STRONG Leeson Studio",
             "BOX SWEAT - Merrion Studio",
             "HYBRID Merrion Studio",
             "FLATLINE Leeson Studio",
-            "FLAT LINE * New Merrion Studio",
-            "BOXING PADS - Merrion Studio",
-            "BOXING PADS - Leeson Studio",
-            "KO Merrion Studio",
-            "TECHNICAL BOXING - Merrion Studio",
-            "10 ROUNDS - Leeson Studio",
-            "PILATES Leeson Studio",
-            "FLAT LINE Merrion Studio",
-            "10 ROUNDS - Merrion Studio",
-            "SPARRING Merrion Studio"
         ]
     }
 }
@@ -99,52 +83,48 @@ def index():
 
 @app.route('/schedule', methods=['POST'])
 def schedule_bot():
-    job = {
-        "email": request.form['email'],
-        "password": request.form['password'],
-        "studio": request.form['studio'],
-        "studio_url": STUDIOS[request.form['studio']]['url'],
-        "class_name": request.form['class_name'],
-        "date": request.form['date'],
-        "time": request.form['time']
-    }
+    try:
+        job = {
+            "email": request.form['email'],
+            "password": request.form['password'],
+            "studio": request.form['studio'],
+            "studio_url": STUDIOS[request.form['studio']]['url'],
+            "class_name": request.form['class_name'],
+            "date": request.form['date'],
+            "time": request.form['time']
+        }
 
+        # Save job
+        with open(JOB_FILE, "w") as file:
+            json.dump(job, file, indent=4)  # Pretty-print JSON for readability
+        print("✅ Job successfully saved to jobs.json!")
 
-import subprocess
+        # Commit and push the updated file to GitHub
+        subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
+        subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
+        subprocess.run(["git", "add", "jobs.json"], check=True)
+        subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        print("✅ Successfully committed jobs.json to GitHub!")
 
-# Save job to jobs.json
-try:
-    with open(JOB_FILE, "w") as file:
-        json.dump(job, file, indent=4)  # Pretty-print JSON for readability
-    print("✅ Job successfully saved to jobs.json!")
+        # Store in logs
+        with open(LOG_FILE, "r+") as file:
+            logs = json.load(file)
+            logs.append({
+                "user": job["email"],
+                "studio": job["studio"],
+                "studio_url": job["studio_url"],
+                "class_name": job["class_name"],
+                "time": f"{job['date']} {job['time']}"
+            })
+            file.seek(0)
+            json.dump(logs, file, indent=4)
 
-    # Commit and push the updated file to GitHub
-    subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
-    subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
-    subprocess.run(["git", "add", "jobs.json"], check=True)
-    subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
-    subprocess.run(["git", "push"], check=True)
+        return jsonify({"message": "✅ Bot scheduled successfully!"})
 
-    print("✅ Successfully committed jobs.json to GitHub!")
-
-except Exception as e:
-    print(f"❌ Error saving or committing jobs.json: {e}")
-
-    # Store in logs
-    with open(LOG_FILE, "r+") as file:
-        logs = json.load(file)
-        logs.append({
-            "user": job["email"],
-            "studio": job["studio"],
-            "studio_url": job["studio_url"],
-            "class_name": job["class_name"],
-            "time": f"{job['date']} {job['time']}"
-        })
-        file.seek(0)
-        json.dump(logs, file)
-
-    print("✅ Job scheduled successfully!")
-    return jsonify({"message": "✅ Bot scheduled successfully!"})
+    except Exception as e:
+        print(f"❌ Error in /schedule: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/logs', methods=['GET'])
 def view_logs():
@@ -154,7 +134,7 @@ def view_logs():
 
     with open(LOG_FILE, "r") as file:
         logs = json.load(file)
-    
+
     return render_template("logs.html", logs=logs)
 
 @app.route('/delete_log', methods=['POST'])
