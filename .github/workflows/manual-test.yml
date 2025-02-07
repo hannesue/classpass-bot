@@ -71,7 +71,7 @@ jobs:
         run: |
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Actions Bot"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/YOUR_GITHUB_USERNAME/YOUR_REPO.git
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/hannesue/classpass-bot.git
           git fetch origin
 
       - name: Keep Workflow Running
