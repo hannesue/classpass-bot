@@ -57,5 +57,11 @@ jobs:
       - name: Debug Flask & Ngrok
         run: curl --fail "$NGROK_URL" || echo "❌ Failed to reach Flask app."
 
+      - name: Show Flask Logs
+        run: cat flask.log || echo "⚠️ Flask log not found"
+
+      - name: Show Ngrok Logs
+        run: cat ngrok.log || echo "⚠️ Ngrok log not found"
+
       - name: Keep Workflow Running
         run: sleep 3600  # Keeps it alive for testing
