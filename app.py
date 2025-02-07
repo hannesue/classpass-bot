@@ -18,7 +18,11 @@ app = Flask(__name__)
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
-GITHUB_PAT = os.getenv("PAT_TOKEN")  # GitHub Personal Access Token from GitHub Secrets
+GITHUB_PAT = os.getenv("PAT_TOKEN")
+
+if not GITHUB_PAT:
+    raise ValueError("❌ ERROR: PAT_TOKEN environment variable is missing! Set it in GitHub Secrets.")
+
 
 # Ensure log & job files exist
 for file_path in [LOG_FILE, JOB_FILE]:
