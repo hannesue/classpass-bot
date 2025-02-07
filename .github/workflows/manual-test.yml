@@ -10,12 +10,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Pull Latest Jobs Data
-        run: |
-          git fetch --all
-          git reset --hard origin/main  # Ensure we have the latest version
-          git pull origin main
-
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
@@ -36,12 +30,18 @@ jobs:
 
       - name: Start Flask App
         run: |
-          python app.py &
-          sleep 5  # Allow Flask to start
+          echo "🚀 Starting Flask App..."
+          nohup python app.py > flask.log 2>&1 &
+          sleep 10  # Allow Flask to start
+
+      - name: Debug Flask (Check if running)
+        run: |
+          curl --fail http://localhost:5000 || echo "❌ Flask is NOT running!"
 
       - name: Start Ngrok Tunnel
         run: |
-          ngrok http 5000 --log=ngrok.log > /dev/null 2>&1 &
+          echo "🚀 Starting Ngrok..."
+          nohup ngrok http 5000 > ngrok.log 2>&1 &
           sleep 10  # Give Ngrok time to initialize
 
       - name: Get Ngrok URL
@@ -57,5 +57,5 @@ jobs:
       - name: Debug Flask & Ngrok
         run: curl --fail "$NGROK_URL" || echo "❌ Failed to reach Flask app."
 
-      - name: Keep Workflow Running for Manual Testing
-        run: sleep 3600  # Keeps it alive for extended testing
+      - name: Keep Workflow Running
+        run: sleep 3600  # Keeps it alive for testing
