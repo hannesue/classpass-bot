@@ -109,9 +109,26 @@ def schedule_bot():
         "time": request.form['time']
     }
 
-    # Save job
+
+import subprocess
+
+# Save job to jobs.json
+try:
     with open(JOB_FILE, "w") as file:
-        json.dump(job, file)
+        json.dump(job, file, indent=4)  # Pretty-print JSON for readability
+    print("✅ Job successfully saved to jobs.json!")
+
+    # Commit and push the updated file to GitHub
+    subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
+    subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
+    subprocess.run(["git", "add", "jobs.json"], check=True)
+    subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
+    subprocess.run(["git", "push"], check=True)
+
+    print("✅ Successfully committed jobs.json to GitHub!")
+
+except Exception as e:
+    print(f"❌ Error saving or committing jobs.json: {e}")
 
     # Store in logs
     with open(LOG_FILE, "r+") as file:
