@@ -18,13 +18,13 @@ app = Flask(__name__)
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
-GITHUB_PAT = os.getenv("PAT_TOKEN")  # GitHub Personal Access Token from secrets
+GITHUB_PAT = os.getenv("PAT_TOKEN")  # GitHub Personal Access Token from GitHub Secrets
 
 # Ensure log & job files exist
 for file_path in [LOG_FILE, JOB_FILE]:
     if not os.path.exists(file_path):
         with open(file_path, "w") as file:
-            json.dump({}, file)
+            json.dump([] if file_path == LOG_FILE else {}, file)  # LOG_FILE as list, JOB_FILE as dict
 
 # Set up scheduler
 scheduler = BackgroundScheduler()
@@ -99,6 +99,11 @@ def schedule_bot():
         # Store in logs
         with open(LOG_FILE, "r+") as file:
             logs = json.load(file)
+
+            # Ensure logs is a list
+            if not isinstance(logs, list):
+                logs = []
+
             logs.append({
                 "user": job["email"],
                 "studio": job["studio"],
