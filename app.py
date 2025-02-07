@@ -18,16 +18,13 @@ app = Flask(__name__)
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
+GITHUB_PAT = os.getenv("PAT_TOKEN")  # GitHub Personal Access Token from secrets
 
-# Ensure log file exists
-if not os.path.exists(LOG_FILE):
-    with open(LOG_FILE, "w") as file:
-        json.dump([], file)
-
-# Ensure job file exists
-if not os.path.exists(JOB_FILE):
-    with open(JOB_FILE, "w") as file:
-        json.dump({}, file)
+# Ensure log & job files exist
+for file_path in [LOG_FILE, JOB_FILE]:
+    if not os.path.exists(file_path):
+        with open(file_path, "w") as file:
+            json.dump({}, file)
 
 # Set up scheduler
 scheduler = BackgroundScheduler()
@@ -96,16 +93,8 @@ def schedule_bot():
 
         # Save job
         with open(JOB_FILE, "w") as file:
-            json.dump(job, file, indent=4)  # Pretty-print JSON for readability
+            json.dump(job, file, indent=4)
         print("✅ Job successfully saved to jobs.json!")
-
-        # Commit and push the updated file to GitHub
-        subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
-        subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
-        subprocess.run(["git", "add", "jobs.json"], check=True)
-        subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
-        subprocess.run(["git", "push"], check=True)
-        print("✅ Successfully committed jobs.json to GitHub!")
 
         # Store in logs
         with open(LOG_FILE, "r+") as file:
@@ -119,6 +108,15 @@ def schedule_bot():
             })
             file.seek(0)
             json.dump(logs, file, indent=4)
+
+        # Commit & push the updated file to GitHub
+        subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
+        subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
+        subprocess.run(["git", "add", "jobs.json"], check=True)
+        subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
+        subprocess.run(["git", "push", f"https://{GITHUB_PAT}@github.com/YOUR_GITHUB_USERNAME/YOUR_REPO.git"], check=True)
+
+        print("✅ Successfully committed jobs.json to GitHub!")
 
         return jsonify({"message": "✅ Bot scheduled successfully!"})
 
