@@ -67,5 +67,12 @@ jobs:
       - name: Show Ngrok Logs
         run: cat ngrok.log || echo "⚠️ Ngrok log not found"
 
+      - name: Set Up Git for Job Persistence
+        run: |
+          git config --global user.email "bot@github.com"
+          git config --global user.name "GitHub Actions Bot"
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/YOUR_GITHUB_USERNAME/YOUR_REPO.git
+          git fetch origin
+
       - name: Keep Workflow Running
         run: sleep 3600  # Keeps it alive for testing
