@@ -16,7 +16,10 @@ jobs:
           python-version: 3.11
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip list  # Show installed packages
 
       - name: Install Ngrok
         run: |
@@ -31,8 +34,9 @@ jobs:
       - name: Start Flask App
         run: |
           echo "🚀 Starting Flask App..."
-          nohup python app.py > flask.log 2>&1 &
+          python app.py > flask.log 2>&1 &
           sleep 10  # Allow Flask to start
+          pgrep -af python || echo "❌ Flask did NOT start!"  # Check if Flask is running
 
       - name: Debug Flask (Check if running)
         run: |
