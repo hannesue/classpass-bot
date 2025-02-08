@@ -38,29 +38,46 @@ try:
     driver.find_element(By.ID, "email").send_keys(job["email"])
     driver.find_element(By.ID, "password").send_keys(job["password"])
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
-    print("✅ Login submitted")
+    print("✅ Login attempt submitted")
 
     # ✅ Ensure Login is Fully Completed
     try:
         WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.XPATH, "//nav"))  # Adjust for correct dashboard element
         )
-        print(f"✅ Successfully logged in! Current URL: {driver.current_url}")
+        print(f"✅ Successfully redirected to Dashboard! Current URL: {driver.current_url}")
     except:
         print(f"❌ Login failed! Current URL: {driver.current_url}")
         driver.quit()
         exit()
 
-    # ✅ 2. NAVIGATE TO STUDIO PAGE
-    print(f"🌍 Navigating to Studio: {job['studio_url']}")
-    driver.get(job["studio_url"])
-    time.sleep(5)  # Allow studio page to load
+    # ✅ 2. NAVIGATE TO STUDIO PAGE (Retry if necessary)
+    MAX_RETRIES = 3
+    retries = 0
 
-    if driver.current_url != job["studio_url"]:
-        print(f"❌ Failed to load Studio Page! Current URL: {driver.current_url}")
+    while retries < MAX_RETRIES:
+        print(f"🌍 Navigating to Studio: {job['studio_url']}")
+        driver.get(job["studio_url"])
+        time.sleep(5)  # Allow studio page to load
+
+        # Check if navigation was successful
+        current_url = driver.current_url
+        if "classes" in current_url:  # If correct URL is loaded
+            print("✅ Successfully loaded studio page!")
+            break
+        elif "studios" in current_url:  # If incorrect URL is loaded
+            print(f"⚠️ Redirected to an incorrect URL: {current_url}. Retrying...")
+            retries += 1
+            time.sleep(3)
+        else:
+            print(f"❌ Unknown page loaded: {current_url}. Retrying...")
+            retries += 1
+            time.sleep(3)
+
+    if retries == MAX_RETRIES:
+        print("❌ Failed to load the correct studio page after multiple attempts.")
         driver.quit()
         exit()
-    print("✅ Successfully loaded studio page!")
 
     # ✅ 3. SELECT DATE
     print(f"📌 Finding Date: {job['date']}")
