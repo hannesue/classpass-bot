@@ -18,7 +18,7 @@ app = Flask(__name__)
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
-GITHUB_PAT = os.getenv("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")  # GitHub Personal Access Token from GitHub Secrets
+GITHUB_PAT = "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"  # GitHub Personal Access Token from GitHub Secrets
 
 # Ensure log & job files exist
 for file_path in [LOG_FILE, JOB_FILE]:
