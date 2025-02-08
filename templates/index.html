@@ -125,19 +125,23 @@
             }
         }
 
-        function scheduleBot(event) {
-            event.preventDefault();
-            let formData = new FormData(document.getElementById("scheduleForm"));
+ function scheduleBot(event) {
+        event.preventDefault();
+        let formData = new FormData(document.getElementById("scheduleForm"));
+        fetch("/schedule", { method: "POST", body: formData })
+            .then(response => response.json())
+            .then(data => {
+                let messageBox = document.getElementById("message");
+                messageBox.innerText = data.message;
+                messageBox.style.display = "block";
 
-            fetch("/schedule", { method: "POST", body: formData })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("message").innerText = data.message || data.error;
-                    document.getElementById("message").style.display = "block";
-                    document.getElementById("scheduleForm").reset();
-                })
-                .catch(error => console.error("❌ Fetch Error:", error));
-        }
+                // Hide message after 3 seconds
+                setTimeout(() => { messageBox.style.display = "none"; }, 3000);
+
+                document.getElementById("scheduleForm").reset();
+            });
+    }
+        
 
         function runManualBot() {
         fetch("/run_bot", { method: "POST" })
