@@ -42,21 +42,27 @@ try:
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
     print("✅ Login attempt submitted")
 
-    # ✅ Wait for Dashboard Element (Instead of Checking URL)
+    # ✅ Wait for Login Completion
     try:
         WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//nav"))  # Change this to an actual dashboard element
+            EC.presence_of_element_located((By.XPATH, "//nav"))  # Change this to a real dashboard element
         )
         print("✅ Successfully redirected to Dashboard!")
     except:
-        print("❌ Login failed! Dashboard did not load.")
+        print(f"❌ Login failed! Current URL: {driver.current_url}")
         driver.quit()
         exit()
 
-    # ✅ 2. NAVIGATE TO STUDIO PAGE
-    print(f"🚀 Opening Studio: {job['studio']}")
+    # ✅ 2. CONFIRM STUDIO URL NAVIGATION
+    print(f"🌍 Navigating to Studio: {job['studio_url']}")
     driver.get(job["studio_url"])
     time.sleep(5)
+
+    if driver.current_url != job["studio_url"]:
+        print(f"❌ Failed to load Studio Page! Current URL: {driver.current_url}")
+        driver.quit()
+        exit()
+    print("✅ Successfully loaded studio page!")
 
     # ✅ 3. SELECT DATE
     print(f"📌 Finding Date: {job['date']}")
