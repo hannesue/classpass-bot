@@ -1,0 +1,24 @@
+name: Scheduled Class Booking
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # Runs daily at 6AM UTC
+  workflow_dispatch:  # Allows manual execution
+
+jobs:
+  book-classes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Booking Script
+        run: python booking.py
