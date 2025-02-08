@@ -122,7 +122,7 @@ def schedule_bot():
         subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
         subprocess.run(["git", "add", "jobs.json"], check=True)
         subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
-       subprocess.run(["git", "push", f"https://{GITHUB_PAT}@github.com/hannesue/classpass-bot.git"], check=True)
+       subprocess.run(["git", "push", f"https://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@github.com/hannesue/classpass-bot.git"], check=True)
 
 
         print("✅ Successfully committed jobs.json to GitHub!")
