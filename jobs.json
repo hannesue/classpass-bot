@@ -1,23 +1,5 @@
 [
     {
-        "email": "dqwdqwd@ded.de",
-        "password": "dqwdq",
-        "studio": "Perpetua Fitness",
-        "studio_url": "https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt",
-        "class_name": "T&S | FULL BODY | ALL IN",
-        "date": "Wed, Feb 12",
-        "time": "6:00 AM"
-    },
-    {
-        "email": "dqdqwd@de.de",
-        "password": "qwdqwdwqd",
-        "studio": "Perpetua Fitness",
-        "studio_url": "https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt",
-        "class_name": "T&S | FULL BODY | ALL IN",
-        "date": "Wed, Feb 12",
-        "time": "6:00 AM"
-    },
-    {
         "email": "ueberschaer@de.com",
         "password": "sqwdqwd",
         "studio": "Perpetua Fitness",
@@ -29,6 +11,15 @@
     {
         "email": "ueberhscaer@dwdqwd",
         "password": "qwdqwd",
+        "studio": "Perpetua Fitness",
+        "studio_url": "https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt",
+        "class_name": "T&S | FULL BODY | ALL IN",
+        "date": "Wed, Feb 12",
+        "time": "6:00 AM"
+    },
+    {
+        "email": "ueberschaer@google.com",
+        "password": "Test",
         "studio": "Perpetua Fitness",
         "studio_url": "https://classpass.com/classes/perpetua-fitness--windmill-lane-dublin-lrpt",
         "class_name": "T&S | FULL BODY | ALL IN",
