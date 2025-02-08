@@ -13,20 +13,34 @@ SAUCE_ACCESS_KEY = "78421343-d4ed-4a10-981f-6194ecfc7122"
 SAUCE_URL = f"https://{SAUCE_USERNAME}:{SAUCE_ACCESS_KEY}@ondemand.eu-central-1.saucelabs.com/wd/hub"
 
 # Read latest job from jobs.json
-with open("jobs.json", "r") as file:
-    jobs = json.load(file)
+try:
+    with open("jobs.json", "r") as file:
+        jobs = json.load(file)
 
-if not jobs:
-    print("❌ No bookings found.")
+    if not jobs:
+        print("❌ No bookings found.")
+        exit()
+
+    job = jobs[0]  # Only executing the latest job
+    print(f"🚀 Booking {job['class_name']} at {job['studio']} on {job['date']} at {job['time']}")
+
+except (FileNotFoundError, json.JSONDecodeError) as e:
+    print(f"❌ Error reading jobs.json: {e}")
     exit()
 
-job = jobs[0]  # Only executing the latest job
-print(f"🚀 Booking {job['class_name']} at {job['studio']} on {job['date']} at {job['time']}")
+# Set up WebDriver for Sauce Labs with High Resolution
+capabilities = {
+    "browserName": "chrome",
+    "browserVersion": "latest",
+    "platformName": "Windows 11",
+    "sauce:options": {
+        "screenResolution": "1920x1080",  # High Resolution for Clarity
+        "name": f"ClassPass Booking: {job['class_name']} @ {job['studio']}",
+        "build": "ClassPass Automation"
+    }
+}
 
-# Set up WebDriver for Sauce Labs
-options = webdriver.ChromeOptions()
-options.add_argument("--start-maximized")
-driver = webdriver.Remote(command_executor=SAUCE_URL, options=options)
+driver = webdriver.Remote(command_executor=SAUCE_URL, options=webdriver.ChromeOptions().to_capabilities())
 
 try:
     # Login
@@ -59,6 +73,7 @@ try:
     print(f"🔍 Looking for {job['class_name']} at {job['time']}")
     classes = driver.find_elements(By.XPATH, "//section[@data-component='Section']")
 
+    booked = False
     for c in classes:
         if job["class_name"] in c.text and job["time"] in c.text:
             print("✅ Class found, booking...")
@@ -68,7 +83,11 @@ try:
             print("📌 Confirming reservation")
             driver.find_element(By.XPATH, "//button[@data-qa='Inquiry.reserve-button']").click()
             print("✅ Booking completed!")
+            booked = True
             break
+
+    if not booked:
+        print("❌ Class not found or booking failed.")
 
     # ✅ Remove the completed job from jobs.json
     jobs.remove(job)
