@@ -19,7 +19,7 @@ JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
 GITHUB_PAT = os.getenv("PAT_TOKEN")  # Load from GitHub Secrets
-GITHUB_REPO = f"https://x-access-token:{GITHUB_PAT}@github.com/hannesue/classpass-bot.git"
+GITHUB_REPO = f"https://x-access-token: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@github.com/hannesue/classpass-bot.git"
 
 # Ensure job & log files exist
 for file_path in [JOB_FILE, LOG_FILE]:
