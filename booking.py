@@ -21,7 +21,7 @@ try:
         print("❌ No bookings found.")
         exit()
 
-    job = jobs[0]  # Only executing the latest job
+    job = jobs[0]  # Execute the latest job
     print(f"🚀 Booking {job['class_name']} at {job['studio']} on {job['date']} at {job['time']}")
 
 except (FileNotFoundError, json.JSONDecodeError) as e:
@@ -29,18 +29,19 @@ except (FileNotFoundError, json.JSONDecodeError) as e:
     exit()
 
 # Set up WebDriver for Sauce Labs with High Resolution
-capabilities = {
-    "browserName": "chrome",
-    "browserVersion": "latest",
-    "platformName": "Windows 11",
-    "sauce:options": {
-        "screenResolution": "1920x1080",  # High Resolution for Clarity
-        "name": f"ClassPass Booking: {job['class_name']} @ {job['studio']}",
-        "build": "ClassPass Automation"
-    }
-}
+options = webdriver.ChromeOptions()
+options.add_argument("--start-maximized")
+options.set_capability("browserName", "chrome")
+options.set_capability("browserVersion", "latest")
+options.set_capability("platformName", "Windows 11")
+options.set_capability("sauce:options", {
+    "screenResolution": "1920x1080",  # High resolution for clarity
+    "name": f"ClassPass Booking: {job['class_name']} @ {job['studio']}",
+    "build": "ClassPass Automation"
+})
 
-driver = webdriver.Remote(command_executor=SAUCE_URL, options=webdriver.ChromeOptions().to_capabilities())
+# ✅ Fix: Pass `options=options` directly
+driver = webdriver.Remote(command_executor=SAUCE_URL, options=options)
 
 try:
     # Login
