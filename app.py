@@ -92,9 +92,12 @@ def schedule_bot():
         }
 
         # Save job
-        with open(JOB_FILE, "w") as file:
-            json.dump(job, file, indent=4)
-        print("✅ Job successfully saved to jobs.json!")
+try:
+    with open(JOB_FILE, "w") as file:
+        json.dump(job, file, indent=4)
+    print("✅ Job successfully saved to jobs.json!")
+except Exception as e:
+    print(f"❌ ERROR writing to jobs.json: {e}")
 
         # Store in logs
         with open(LOG_FILE, "r+") as file:
