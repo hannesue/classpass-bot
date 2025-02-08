@@ -80,21 +80,30 @@
 <body>
     <div class="container">
         <h1>📜 Booking Logs</h1>
-        <table>
-            <tr>
-                <th>User</th>
-                <th>Studio</th>
-                <th>Class</th>
-                <th>Time</th>
-            </tr>
-            {% for log in logs %}
-            <tr>
-                <td>{{ log.user }}</td>
-                <td><a href="{{ log.studio_url }}" target="_blank">{{ log.studio }}</a></td>
-                <td>{{ log.class_name }}</td>
-                <td>{{ log.time }}</td>
-            </tr>
-            {% endfor %}
+<table>
+    <tr>
+        <th>User (Email)</th>
+        <th>Studio</th>
+        <th>Class Name</th>
+        <th>Time</th>
+        <th>Action</th>
+    </tr>
+    {% for log in logs %}
+    <tr>
+        <td>{{ log.user }}</td>  <!-- ✅ Show Email -->
+        <td>{{ log.studio }}</td>
+        <td>{{ log.class_name }}</td>
+        <td>{{ log.time }}</td>
+        <td>
+            <form action="/delete_single_log" method="post">
+                <input type="hidden" name="password" value="DietCoke">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit">🗑 Delete</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
         </table>
         <button class="delete-btn" onclick="deleteLogs()">❌ Delete All Logs</button>
         <button class="back-btn" onclick="goBack()">🔙 Back</button>
