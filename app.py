@@ -18,7 +18,9 @@ app = Flask(__name__)
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
-GITHUB_PAT = os.getenv("PAT_TOKEN")  # GitHub Personal Access Token from GitHub Secrets
+GITHUB_PAT = os.getenv("PAT_TOKEN")  # Load from environment variable
+GITHUB_REPO = "https://x-access-token:" + GITHUB_PAT + "@github.com/hannesue/classpass-bot.git"
+
 
 # Ensure log & job files exist
 for file_path in [LOG_FILE, JOB_FILE]:
@@ -117,7 +119,7 @@ def schedule_bot():
         subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
         subprocess.run(["git", "add", "jobs.json"], check=True)
         subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
-        subprocess.run(["git", "push", f"https://x-access-token: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@github.com/hannesue/classpass-bot.git"], check=True)
+        subprocess.run(["git", "push", GITHUB_REPO], check=True)
 
         print("✅ Successfully committed jobs.json to GitHub!")
 
