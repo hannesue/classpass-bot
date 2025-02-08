@@ -19,13 +19,13 @@ JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
 GITHUB_PAT = os.getenv("PAT_TOKEN")  # Load from GitHub Secrets
-GITHUB_REPO = f"https://x-access-token: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@github.com/hannesue/classpass-bot.git"
+GITHUB_REPO = f"https://x-access-token:{GITHUB_PAT}@github.com/hannesue/classpass-bot.git"
 
 # Ensure job & log files exist
 for file_path in [JOB_FILE, LOG_FILE]:
     if not os.path.exists(file_path):
         with open(file_path, "w") as file:
-            json.dump([], file)  # Store jobs/logs as lists
+            json.dump([], file)  # Store as list
 
 # Set up scheduler
 scheduler = BackgroundScheduler()
@@ -75,35 +75,29 @@ def generate_time_slots():
             times.append(f"{display_hour}:{minute:02d} {am_pm}")
     return times
 
-# 🔹 WEB UI ROUTE
 @app.route('/')
 def index():
     return render_template("index.html", studios=STUDIOS, dates=generate_dates(), times=generate_time_slots())
 
-# 🔹 SCHEDULE A JOB (FIXED!)
 @app.route('/schedule', methods=['POST'])
 def schedule_bot():
     try:
         job = {
-            "email": request.form.get('email', "").strip(),
-            "password": request.form.get('password', "").strip(),
-            "studio": request.form.get('studio', "").strip(),
-            "studio_url": STUDIOS.get(request.form.get('studio', ""), {}).get('url', ""),
-            "class_name": request.form.get('class_name', "").strip(),
-            "date": request.form.get('date', "").strip(),
-            "time": request.form.get('time', "").strip()
+            "email": request.form['email'],
+            "password": request.form['password'],
+            "studio": request.form['studio'],
+            "studio_url": STUDIOS[request.form['studio']]['url'],
+            "class_name": request.form['class_name'],
+            "date": request.form['date'],
+            "time": request.form['time']
         }
-
-        # Ensure no missing fields
-        if not all(job.values()):
-            return jsonify({"error": "❌ Missing required fields!"}), 400
 
         # Read existing jobs.json data
         try:
             with open(JOB_FILE, "r") as file:
                 jobs = json.load(file)
                 if not isinstance(jobs, list):
-                    jobs = []
+                    jobs = []  # Ensure jobs.json is a list
         except (FileNotFoundError, json.JSONDecodeError):
             jobs = []
 
@@ -115,13 +109,21 @@ def schedule_bot():
             json.dump(jobs, file, indent=4)
         print("✅ Job successfully saved to jobs.json!")
 
+        # Commit & push the updated file to GitHub
+        subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
+        subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
+        subprocess.run(["git", "add", "jobs.json"], check=True)
+        subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
+        subprocess.run(["git", "push", GITHUB_REPO], check=True)
+
+        print("✅ Successfully committed jobs.json to GitHub!")
+
         return jsonify({"message": "✅ Bot scheduled successfully!"})
 
     except Exception as e:
         print(f"❌ Error in /schedule: {e}")
         return jsonify({"error": str(e)}), 500
 
-# 🔹 VIEW LOGS
 @app.route('/logs', methods=['GET'])
 def view_logs():
     password = request.args.get("password")
@@ -132,25 +134,26 @@ def view_logs():
         with open(JOB_FILE, "r") as file:
             logs = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        logs = []
+        logs = []  # If file doesn't exist or is corrupted, show empty logs
 
     return render_template("logs.html", logs=logs)
 
-# 🔹 DELETE SINGLE JOB
 @app.route('/delete_single_log', methods=['POST'])
 def delete_single_log():
     password = request.form.get("password")
-    index = int(request.form.get("index", "-1"))
+    index = int(request.form.get("index"))  # Get the index of the log entry
 
     if password != PASSWORD:
         return "❌ Access Denied: Invalid password!", 403
 
+    # Read logs
     with open(JOB_FILE, "r") as file:
         logs = json.load(file)
 
-    if 0 <= index < len(logs):
-        logs.pop(index)
+    if 0 <= index < len(logs):  # Ensure valid index
+        logs.pop(index)  # Remove entry
 
+        # Write updated logs back
         with open(JOB_FILE, "w") as file:
             json.dump(logs, file, indent=4)
 
@@ -158,7 +161,6 @@ def delete_single_log():
 
     return jsonify({"error": "❌ Invalid log entry index!"}), 400
 
-# 🔹 MANUAL BOT EXECUTION
 @app.route('/run_bot', methods=['POST'])
 def run_bot_manually():
     try:
@@ -166,10 +168,10 @@ def run_bot_manually():
         start_bot()
         return jsonify({"message": "✅ Bot executed successfully!"})
     except Exception as e:
-        print(f"❌ Error running bot: {e}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Error running bot: {e}")  # Print error to logs
+        return jsonify({"error": f"❌ Error running bot: {str(e)}"}), 500
 
-# 🔹 FUNCTION TO RUN BOOKING BOT (RESTORED!)
+# Function to start the bot
 def start_bot():
     try:
         with open(JOB_FILE, "r") as file:
@@ -204,6 +206,5 @@ def start_bot():
     except Exception as e:
         print(f"❌ Error during booking: {e}")
 
-# 🔹 RUN FLASK APP
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
