@@ -92,12 +92,12 @@ def schedule_bot():
         }
 
         # Save job
-try:
-    with open(JOB_FILE, "w") as file:
-        json.dump(job, file, indent=4)
-    print("✅ Job successfully saved to jobs.json!")
-except Exception as e:
-    print(f"❌ ERROR writing to jobs.json: {e}")
+        try:
+            with open(JOB_FILE, "w") as file:
+                json.dump(job, file, indent=4)
+            print("✅ Job successfully saved to jobs.json!")
+        except Exception as e:
+            print(f"❌ ERROR writing to jobs.json: {e}")
 
         # Store in logs
         with open(LOG_FILE, "r+") as file:
@@ -122,7 +122,7 @@ except Exception as e:
         subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
         subprocess.run(["git", "add", "jobs.json"], check=True)
         subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
-        subprocess.run(["git", "push", f"https://x-access-token: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@github.com/hannesue/classpass-bot.git"], check=True)
+        subprocess.run(["git", "push", f"https://x-access-token:{GITHUB_PAT}@github.com/hannesue/classpass-bot.git"], check=True)
 
         print("✅ Successfully committed jobs.json to GitHub!")
 
