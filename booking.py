@@ -3,11 +3,9 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
 # Sauce Labs credentials
 SAUCE_USERNAME = "oauth-ueberschaergbr-dc0f3"
@@ -22,41 +20,41 @@ if not jobs:
     print("❌ No bookings found.")
     exit()
 
-job = jobs[0]  # Only executing the latest job
+job = jobs[0]  # Execute the latest job
 print(f"🚀 Booking {job['class_name']} at {job['studio']} on {job['date']} at {job['time']}")
 
 # Set up WebDriver for Sauce Labs with High Resolution
 options = webdriver.ChromeOptions()
-options.add_argument("--start-maximized")  # Full-screen window
-options.add_argument("--window-size=1920,1080")  # High resolution
+options.add_argument("--start-maximized")
+options.add_argument("--window-size=1920,1080")
 driver = webdriver.Remote(command_executor=SAUCE_URL, options=options)
 
 try:
     # ✅ 1. LOGIN PROCESS
-    print("🚀 Logging into ClassPass")
+    print("🚀 Navigating to ClassPass Login Page")
     driver.get("https://classpass.com/login")
-    time.sleep(3)  # Allow page to load
+    time.sleep(5)  # Allow login page to load
 
     driver.find_element(By.ID, "email").send_keys(job["email"])
     driver.find_element(By.ID, "password").send_keys(job["password"])
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
-    print("✅ Login attempt submitted")
+    print("✅ Login submitted")
 
-    # ✅ Wait for Login Completion
+    # ✅ Ensure Login is Fully Completed
     try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//nav"))  # Change this to a real dashboard element
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.XPATH, "//nav"))  # Adjust for correct dashboard element
         )
-        print("✅ Successfully redirected to Dashboard!")
+        print(f"✅ Successfully logged in! Current URL: {driver.current_url}")
     except:
         print(f"❌ Login failed! Current URL: {driver.current_url}")
         driver.quit()
         exit()
 
-    # ✅ 2. CONFIRM STUDIO URL NAVIGATION
+    # ✅ 2. NAVIGATE TO STUDIO PAGE
     print(f"🌍 Navigating to Studio: {job['studio_url']}")
     driver.get(job["studio_url"])
-    time.sleep(5)
+    time.sleep(5)  # Allow studio page to load
 
     if driver.current_url != job["studio_url"]:
         print(f"❌ Failed to load Studio Page! Current URL: {driver.current_url}")
