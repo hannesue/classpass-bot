@@ -5,6 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Sauce Labs credentials
@@ -38,12 +40,16 @@ try:
     driver.find_element(By.ID, "email").send_keys(job["email"])
     driver.find_element(By.ID, "password").send_keys(job["password"])
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
-    print("✅ Logged in successfully")
-    time.sleep(5)  # Allow time for login redirect
+    print("✅ Login attempt submitted")
 
-    # ❗ CHECK IF LOGIN WAS SUCCESSFUL
-    if "dashboard" not in driver.current_url:
-        print("❌ Login failed! Not redirected to dashboard.")
+    # ✅ Wait for Dashboard Element (Instead of Checking URL)
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//nav"))  # Change this to an actual dashboard element
+        )
+        print("✅ Successfully redirected to Dashboard!")
+    except:
+        print("❌ Login failed! Dashboard did not load.")
         driver.quit()
         exit()
 
