@@ -18,13 +18,13 @@ app = Flask(__name__)
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
-GITHUB_PAT = "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"  # GitHub Personal Access Token from GitHub Secrets
+GITHUB_PAT = os.getenv("PAT_TOKEN")  # GitHub Personal Access Token from GitHub Secrets
 
 # Ensure log & job files exist
 for file_path in [LOG_FILE, JOB_FILE]:
     if not os.path.exists(file_path):
         with open(file_path, "w") as file:
-            json.dump([] if file_path == LOG_FILE else {}, file)  # LOG_FILE as list, JOB_FILE as dict
+            json.dump([] if file_path == JOB_FILE else [], file)  # Both should be lists
 
 # Set up scheduler
 scheduler = BackgroundScheduler()
@@ -91,41 +91,33 @@ def schedule_bot():
             "time": request.form['time']
         }
 
-        # Save job
+        # Read existing jobs.json data
         try:
-            with open(JOB_FILE, "w") as file:
-                json.dump(job, file, indent=4)
-            print("✅ Job successfully saved to jobs.json!")
-        except Exception as e:
-            print(f"❌ ERROR writing to jobs.json: {e}")
+            with open(JOB_FILE, "r") as file:
+                jobs = json.load(file)
+                if not isinstance(jobs, list):
+                    jobs = []  # Ensure jobs.json is a list
+        except (FileNotFoundError, json.JSONDecodeError):
+            jobs = []
 
-        # Store in logs
-        with open(LOG_FILE, "r+") as file:
-            logs = json.load(file)
+        # Add new job
+        jobs.append(job)
 
-            # Ensure logs is a list
-            if not isinstance(logs, list):
-                logs = []
+        # Save updated jobs.json
+        with open(JOB_FILE, "w") as file:
+            json.dump(jobs, file, indent=4)
+        print("✅ Job successfully saved to jobs.json!")
 
-            logs.append({
-                "user": job["email"],
-                "studio": job["studio"],
-                "studio_url": job["studio_url"],
-                "class_name": job["class_name"],
-                "time": f"{job['date']} {job['time']}"
-            })
-            file.seek(0)
-            json.dump(logs, file, indent=4)
+        # Store in logs (same as jobs.json)
+        with open(LOG_FILE, "w") as file:
+            json.dump(jobs, file, indent=4)
 
         # Commit & push the updated file to GitHub
         subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
         subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
         subprocess.run(["git", "add", "jobs.json"], check=True)
         subprocess.run(["git", "commit", "-m", "Updated jobs.json with new booking"], check=True)
-        subprocess.run(["git", "push", f"https://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@github.com/hannesue/classpass-bot.git"], check=True)
-
-        print("✅ Successfully committed jobs.json to GitHub!")
-
+        subprocess.run(["git", "push", f"https://x-access-token:{GITHUB_PAT}@github.com/hannesue/classpass-bot.git"], check=True)
 
         print("✅ Successfully committed jobs.json to GitHub!")
 
@@ -141,8 +133,11 @@ def view_logs():
     if password != PASSWORD:
         return "❌ Access Denied: Invalid password!", 403
 
-    with open(LOG_FILE, "r") as file:
-        logs = json.load(file)
+    try:
+        with open(JOB_FILE, "r") as file:
+            logs = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        logs = []  # If file doesn't exist or is corrupted, show empty logs
 
     return render_template("logs.html", logs=logs)
 
@@ -152,7 +147,7 @@ def delete_log():
     if password != PASSWORD:
         return "❌ Access Denied: Invalid password!", 403
 
-    with open(LOG_FILE, "w") as file:
+    with open(JOB_FILE, "w") as file:
         json.dump([], file)
 
     return jsonify({"message": "✅ Logs cleared successfully!"})
@@ -171,48 +166,45 @@ def run_bot_manually():
 def start_bot():
     try:
         with open(JOB_FILE, "r") as file:
-            job = json.load(file)
+            jobs = json.load(file)
 
-        print(f"🚀 Starting bot for user {job['email']}")
+        for job in jobs:
+            print(f"🚀 Starting bot for user {job['email']}")
 
-        # Set up Selenium WebDriver
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
+            # Set up Selenium WebDriver
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--no-sandbox")
 
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        
-        # Open ClassPass login page
-        driver.get("https://classpass.com/login")
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-        # Login
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(job["email"])
-        driver.find_element(By.ID, "password").send_keys(job["password"])
-        driver.find_element(By.ID, "password").submit()
-        print("✅ Logged in successfully!")
+            # Open ClassPass login page
+            driver.get("https://classpass.com/login")
 
-        # Open Studio Page
-        driver.get(job["studio_url"])
-        print(f"🚀 Navigated to studio: {job['studio_url']}")
+            # Login
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email"))).send_keys(job["email"])
+            driver.find_element(By.ID, "password").send_keys(job["password"])
+            driver.find_element(By.ID, "password").submit()
+            print("✅ Logged in successfully!")
 
-        # Select Class Date
-        print(f"📅 Searching for date: {job['date']}")
-        while True:
-            current_date = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']").text.strip()
-            if current_date == job["date"]:
-                print("✅ Correct date found!")
-                break
+            # Open Studio Page
+            driver.get(job["studio_url"])
+            print(f"🚀 Navigated to studio: {job['studio_url']}")
+
+            # Select Class Date
+            print(f"📅 Searching for date: {job['date']}")
             driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
-        
-        # Find Class and Click Booking Button
-        print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
-        class_element = driver.find_element(By.XPATH, f"//h3[contains(text(), '{job['class_name']}')]/../..//time/span[contains(text(), '{job['time']}')]")
-        book_button = class_element.find_element(By.XPATH, "./following-sibling::div//button[contains(@aria-label, 'Reserve')]")
-        book_button.click()
-        print("✅ Class booked successfully!")
 
-        driver.quit()
+            # Find Class and Click Booking Button
+            print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
+            class_element = driver.find_element(By.XPATH, f"//h3[contains(text(), '{job['class_name']}')]/../..//time/span[contains(text(), '{job['time']}')]")
+            book_button = class_element.find_element(By.XPATH, "./following-sibling::div//button[contains(@aria-label, 'Reserve')]")
+            book_button.click()
+            print("✅ Class booked successfully!")
+
+            driver.quit()
+
     except Exception as e:
         print(f"❌ Error during booking: {e}")
 
