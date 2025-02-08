@@ -18,15 +18,13 @@ app = Flask(__name__)
 JOB_FILE = "jobs.json"
 LOG_FILE = "logs.json"
 PASSWORD = "DietCoke"
-GITHUB_PAT = os.getenv("PAT_TOKEN")  # Load from environment variable
-GITHUB_REPO = "https://x-access-token:" + GITHUB_PAT + "@github.com/hannesue/classpass-bot.git"
+GITHUB_PAT = os.getenv("PAT_TOKEN")  # Load from GitHub Secrets
+GITHUB_REPO = f"https://x-access-token:{GITHUB_PAT}@github.com/hannesue/classpass-bot.git"
 
-
-# Ensure log & job files exist
-for file_path in [LOG_FILE, JOB_FILE]:
-    if not os.path.exists(file_path):
-        with open(file_path, "w") as file:
-            json.dump([] if file_path == JOB_FILE else [], file)  # Both should be lists
+# Ensure job file exists
+if not os.path.exists(JOB_FILE):
+    with open(JOB_FILE, "w") as file:
+        json.dump([], file)  # Store jobs as a list
 
 # Set up scheduler
 scheduler = BackgroundScheduler()
@@ -66,7 +64,7 @@ def generate_dates():
     today = datetime.today()
     return [(today + timedelta(days=i)).strftime("%a, %b %d") for i in range(4, 9)]
 
-# Time Slots (6 AM to 8 PM in 5-min intervals)
+# Generate time slots (6 AM to 8 PM in 5-min intervals)
 def generate_time_slots():
     times = []
     for hour in range(6, 21):  # 6 AM to 8 PM
@@ -110,10 +108,6 @@ def schedule_bot():
             json.dump(jobs, file, indent=4)
         print("✅ Job successfully saved to jobs.json!")
 
-        # Store in logs (same as jobs.json)
-        with open(LOG_FILE, "w") as file:
-            json.dump(jobs, file, indent=4)
-
         # Commit & push the updated file to GitHub
         subprocess.run(["git", "config", "--global", "user.email", "bot@github.com"], check=True)
         subprocess.run(["git", "config", "--global", "user.name", "GitHub Actions Bot"], check=True)
@@ -143,16 +137,28 @@ def view_logs():
 
     return render_template("logs.html", logs=logs)
 
-@app.route('/delete_log', methods=['POST'])
-def delete_log():
+@app.route('/delete_single_log', methods=['POST'])
+def delete_single_log():
     password = request.form.get("password")
+    index = int(request.form.get("index"))  # Get the index of the log entry
+
     if password != PASSWORD:
         return "❌ Access Denied: Invalid password!", 403
 
-    with open(JOB_FILE, "w") as file:
-        json.dump([], file)
+    # Read logs
+    with open(JOB_FILE, "r") as file:
+        logs = json.load(file)
 
-    return jsonify({"message": "✅ Logs cleared successfully!"})
+    if 0 <= index < len(logs):  # Ensure valid index
+        logs.pop(index)  # Remove entry
+
+        # Write updated logs back
+        with open(JOB_FILE, "w") as file:
+            json.dump(logs, file, indent=4)
+
+        return jsonify({"message": "✅ Log entry deleted successfully!"})
+
+    return jsonify({"error": "❌ Invalid log entry index!"}), 400
 
 @app.route('/run_bot', methods=['POST'])
 def run_bot_manually():
@@ -193,17 +199,6 @@ def start_bot():
             # Open Studio Page
             driver.get(job["studio_url"])
             print(f"🚀 Navigated to studio: {job['studio_url']}")
-
-            # Select Class Date
-            print(f"📅 Searching for date: {job['date']}")
-            driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
-
-            # Find Class and Click Booking Button
-            print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
-            class_element = driver.find_element(By.XPATH, f"//h3[contains(text(), '{job['class_name']}')]/../..//time/span[contains(text(), '{job['time']}')]")
-            book_button = class_element.find_element(By.XPATH, "./following-sibling::div//button[contains(@aria-label, 'Reserve')]")
-            book_button.click()
-            print("✅ Class booked successfully!")
 
             driver.quit()
 
