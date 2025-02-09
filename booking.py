@@ -24,47 +24,52 @@ if not jobs:
 job = jobs[0]  # Execute the latest job
 print(f"🚀 Booking {job['class_name']} at {job['studio']} on {job['date']} at {job['time']}")
 
-# Set up WebDriver for Sauce Labs **with High Resolution**
+# Set up WebDriver for Sauce Labs with High Resolution
 options = webdriver.ChromeOptions()
 options.add_argument("--start-maximized")
-options.add_argument("--window-size=1920,1080")  # Ensures all elements are visible
+options.add_argument("--window-size=1920,1080")  # High resolution for full-page visibility
 driver = webdriver.Remote(command_executor=SAUCE_URL, options=options)
 
 try:
     # ✅ 1. LOGIN PROCESS
     print("🚀 Logging into ClassPass")
     driver.get("https://classpass.com/login")
-    time.sleep(5)  # Allow login page to load
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "email")))
 
     driver.find_element(By.ID, "email").send_keys(job["email"])
     driver.find_element(By.ID, "password").send_keys(job["password"])
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
     print("✅ Login attempt submitted")
-    time.sleep(5)
 
-    # **Verify Successful Login**
-    if "dashboard" in driver.current_url:
+    # ✅ 2. ENSURE LOGIN WAS SUCCESSFUL BEFORE MOVING ON
+    try:
+        WebDriverWait(driver, 10).until(EC.url_contains("classpass.com/dashboard"))
         print("✅ Successfully redirected to Dashboard!")
-    else:
+    except TimeoutException:
         print("❌ Login failed! Not redirected to dashboard.")
+        print(f"🔍 Current URL: {driver.current_url}")
+        driver.quit()
         exit()
 
-    # ✅ 2. NAVIGATE TO STUDIO PAGE
+    # ✅ 3. NAVIGATE TO STUDIO PAGE **AFTER LOGIN**
     print(f"🌍 Navigating to Studio: {job['studio_url']}")
     driver.get(job["studio_url"])
-    time.sleep(5)
-
-    # **Verify Studio Page Loaded**
-    if job["studio_url"] not in driver.current_url:
+    
+    # ✅ 4. ENSURE PAGE LOADS COMPLETELY
+    try:
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//h1")))
+        print("✅ Studio Page Loaded Successfully!")
+    except TimeoutException:
         print(f"❌ Failed to load Studio Page! Current URL: {driver.current_url}")
+        driver.quit()
         exit()
 
-    # ✅ 3. SCROLL DOWN SLIGHTLY
+    # ✅ 5. SCROLL DOWN SLIGHTLY
     driver.execute_script("window.scrollBy(0, 500);")  # Scroll to reveal schedule
     print("📜 Scrolling down slightly to reveal class schedule...")
     time.sleep(2)
 
-    # ✅ 4. FIND DATE
+    # ✅ 6. FIND DATE
     print(f"📅 Searching for date: {job['date']}")
     while True:
         current_date = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']").text.strip()
@@ -74,7 +79,7 @@ try:
         driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
         time.sleep(2)
 
-    # ✅ 5. FIND TIME ELEMENT FIRST (STRICTLY WITHIN SECTION)
+    # ✅ 7. FIND TIME ELEMENT FIRST (STRICTLY WITHIN SECTION)
     print(f"🔍 Searching for time: {job['time']}")
     try:
         time_elements = driver.find_elements(By.XPATH, f"//span[contains(text(), '{job['time']}')]")
@@ -90,7 +95,7 @@ try:
         print(f"❌ Time {job['time']} not found!")
         exit()
 
-    # ✅ 6. FIND CLASS AT THE SPECIFIED TIME
+    # ✅ 8. FIND CLASS AT THE SPECIFIED TIME
     print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
     try:
         # Get the parent section containing the time
@@ -118,7 +123,7 @@ try:
         print("❌ Could not find class booking button!")
         exit()
 
-    # ✅ 7. CONFIRM RESERVATION
+    # ✅ 9. CONFIRM RESERVATION
     print("📌 Confirming reservation")
     time.sleep(3)  # Wait for confirmation screen to load
 
@@ -138,7 +143,7 @@ try:
         except:
             print("❌ Booking confirmation failed!")
 
-    # ✅ 8. REMOVE COMPLETED JOB FROM jobs.json
+    # ✅ 10. REMOVE COMPLETED JOB FROM jobs.json
     jobs.remove(job)
     with open("jobs.json", "w") as file:
         json.dump(jobs, file, indent=4)
