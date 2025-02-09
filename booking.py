@@ -47,23 +47,13 @@ try:
         print("✅ Successfully redirected to Dashboard!")
     else:
         print("❌ Login failed! Not redirected to dashboard.")
-        # **Possible issue: ClassPass might show a "Continue" button after login**
-        try:
-            continue_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Continue')]"))
-            )
-            continue_button.click()
-            print("✅ Clicked Continue button, checking dashboard again...")
-            time.sleep(5)
-        except TimeoutException:
-            print("❌ No Continue button found, proceeding...")
+        exit()
 
-    # ✅ 3. NAVIGATE TO STUDIO PAGE (FORCE LOAD)
+    # ✅ 3. NAVIGATE TO STUDIO PAGE
     print(f"🌍 Navigating to Studio: {job['studio_url']}")
     driver.get(job["studio_url"])
     time.sleep(5)
 
-    # **Verify Studio Page Loaded**
     if job["studio_url"] not in driver.current_url:
         print(f"❌ Failed to load Studio Page! Current URL: {driver.current_url}")
         exit()
@@ -83,7 +73,7 @@ try:
         driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
         time.sleep(2)
 
-    # ✅ 6. FIND TIME ELEMENT FIRST (STRICTLY WITHIN SECTION)
+    # ✅ 6. FIND TIME ELEMENT FIRST
     print(f"🔍 Searching for time: {job['time']}")
     try:
         time_elements = driver.find_elements(By.XPATH, f"//span[contains(text(), '{job['time']}')]")
@@ -102,11 +92,14 @@ try:
     # ✅ 7. FIND CLASS AT THE SPECIFIED TIME
     print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
     try:
-        # Get the parent section containing the time
         section = time_element.find_element(By.XPATH, "./ancestor::section")
 
+        # **DEBUG: PRINT ENTIRE SECTION TEXT BEFORE CLICKING BUTTON**
+        print(f"🔍 Section text where time was found:\n{section.text}")
+
         # Verify if class name is in this section
-        if job["class_name"] in section.text:
+        class_elements = section.find_elements(By.XPATH, ".//span[contains(text(), '{}')]".format(job["class_name"]))
+        if class_elements:
             print("✅ Class found at this time!")
 
             # ✅ Scroll to the correct section before clicking
@@ -114,10 +107,16 @@ try:
             time.sleep(2)
 
             # ✅ Find the booking button **strictly inside the correct section**
-            book_button = section.find_element(By.XPATH, ".//button[contains(@data-qa, 'Schedule.cta')]")
-            print("📌 Clicking the correct booking button now...")
-            book_button.click()
-            print("✅ Booking button clicked!")
+            book_buttons = section.find_elements(By.XPATH, ".//button[contains(@data-qa, 'Schedule.cta')]")
+
+            if book_buttons:
+                book_button = book_buttons[0]  # Take the first button inside the section
+                print(f"📌 Booking Button found inside this section: {book_button.text}")
+                print("✅ Clicking the correct booking button now...")
+                book_button.click()
+                print("✅ Booking button clicked!")
+            else:
+                print("❌ No booking button found in this section!")
 
         else:
             print("❌ Class not found at the specified time. Exiting...")
@@ -129,7 +128,7 @@ try:
 
     # ✅ 8. CONFIRM RESERVATION
     print("📌 Confirming reservation")
-    time.sleep(3)  # Wait for confirmation screen to load
+    time.sleep(3)
 
     # **Handle Different Confirmation Buttons**
     try:
