@@ -4,7 +4,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # Sauce Labs credentials
 SAUCE_USERNAME = "oauth-ueberschaergbr-dc0f3"
@@ -74,11 +76,61 @@ try:
 
     # ✅ 5. FIND CLASS AT THE SPECIFIC TIME
     print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
-    all_classes = driver.find_elements(By.XPATH, "//section[@data-component='Section']")
+    
+    try:
+        # Find all available classes and match both name & time
+        classes = driver.find_elements(By.XPATH, "//section[@data-component='Section']")
+        class_found = False
 
-    class_found = False
-    for c in all_classes:
-        if job["class_name"] in c.text and job["time"] in c.text:
-            print("✅ Class found, booking...")
-            try:
-                c.find_ele
+        for c in classes:
+            class_text = c.text  # Get all text inside class section
+            if job["class_name"] in class_text and job["time"] in class_text:
+                print(f"✅ Found class '{job['class_name']}' at {job['time']}")
+
+                # ✅ Find the exact booking button inside this section
+                book_button = c.find_element(By.XPATH, ".//button[@data-qa='Schedule.cta']")
+                book_button.click()
+                class_found = True
+                break
+        
+        if not class_found:
+            print("❌ Class not found at the specified time. Exiting...")
+            exit()
+
+    except NoSuchElementException:
+        print("❌ Could not find class booking button!")
+        exit()
+
+    # ✅ 6. CONFIRM RESERVATION
+    print("📌 Confirming reservation")
+    time.sleep(3)  # Wait for confirmation screen to load
+
+    # **Handle Different Confirmation Buttons**
+    try:
+        confirm_button = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, "//button[@data-qa='Inquiry.reserve-button']"))
+        )
+        confirm_button.click()
+        print("✅ Booking confirmed!")
+    except TimeoutException:
+        print("❌ Could not find standard confirmation button, trying alternative method...")
+        try:
+            confirm_button_alt = driver.find_element(By.XPATH, "//button[contains(text(), 'Confirm')]")
+            confirm_button_alt.click()
+            print("✅ Booking confirmed (alternative method)!")
+        except:
+            print("❌ Booking confirmation failed!")
+
+    # ✅ 7. REMOVE COMPLETED JOB FROM jobs.json
+    jobs.remove(job)
+    with open("jobs.json", "w") as file:
+        json.dump(jobs, file, indent=4)
+    print("✅ Job removed from jobs.json")
+
+    print("✅ Test Completed")
+
+except Exception as e:
+    print(f"❌ Booking failed: {e}")
+
+finally:
+    driver.quit()
