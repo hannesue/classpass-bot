@@ -3,10 +3,12 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from webdriver_manager.chrome import ChromeDriverManager
 
 # Sauce Labs credentials
 SAUCE_USERNAME = "oauth-ueberschaergbr-dc0f3"
@@ -24,7 +26,7 @@ if not jobs:
 job = jobs[0]  # Execute the latest job
 print(f"🚀 Booking {job['class_name']} at {job['studio']} on {job['date']} at {job['time']}")
 
-# Set up WebDriver for Sauce Labs **with High Resolution**
+# Set up WebDriver for Sauce Labs with High Resolution
 options = webdriver.ChromeOptions()
 options.add_argument("--start-maximized")
 options.add_argument("--window-size=1920,1080")  # Ensures all elements are visible
@@ -40,49 +42,19 @@ try:
     driver.find_element(By.ID, "password").send_keys(job["password"])
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
     print("✅ Login attempt submitted")
+    time.sleep(5)  # Give time for login
 
-    ### ✅ 2. WAIT FOR LOGIN TO COMPLETE
-    WebDriverWait(driver, 10).until(EC.url_contains("dashboard"))
-    print(f"✅ Redirected to Dashboard! Current URL: {driver.current_url}")
-
-    ### 🔴 DEBUG: PRINT WHAT PAGE WE ARE ON
-    time.sleep(3)  # Allow page to stabilize
-    print(f"🔍 After login, current page is: {driver.current_url}")
-
-    ### ❌ STOP IF DASHBOARD NOT REACHED
-    if "dashboard" not in driver.current_url:
-        print(f"❌ ERROR: Expected Dashboard but got {driver.current_url}")
-        exit()
-
-    ### ✅ 3. NAVIGATE TO STUDIO PAGE (FIX)
+    ### ✅ 2. NAVIGATE TO STUDIO PAGE
     print(f"🌍 Navigating to Studio: {job['studio_url']}")
     driver.get(job["studio_url"])
-    time.sleep(5)  # Allow page to load
+    time.sleep(5)  # Allow studio page to load
 
-    ### 🔴 DEBUG: PRINT PAGE AFTER NAVIGATION
-    print(f"🔍 After navigating to studio, current page is: {driver.current_url}")
-
-    ### ❌ STOP IF STUDIO PAGE NOT REACHED
-    if job["studio_url"] not in driver.current_url:
-        print(f"❌ ERROR: Expected {job['studio_url']} but got {driver.current_url}")
-        print("🔄 Retrying studio navigation...")
-        driver.get(job["studio_url"])  # Try again
-        time.sleep(5)
-        print(f"🔍 After retry, current page is: {driver.current_url}")
-
-        # Final check
-        if job["studio_url"] not in driver.current_url:
-            print("❌ Failed to reach studio page. Exiting...")
-            exit()
-
-    print("✅ Successfully loaded the studio page!")
-
-    ### ✅ 4. SCROLL DOWN SLIGHTLY
+    ### ✅ 3. SCROLL DOWN TO REVEAL CLASSES
     driver.execute_script("window.scrollBy(0, 500);")  # Scroll to reveal schedule
     print("📜 Scrolling down slightly to reveal class schedule...")
     time.sleep(2)
 
-    ### ✅ 5. FIND DATE
+    ### ✅ 4. FIND DATE
     print(f"📅 Searching for date: {job['date']}")
     while True:
         current_date = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']").text.strip()
@@ -92,7 +64,7 @@ try:
         driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
         time.sleep(2)
 
-    ### ✅ 6. FIND TIME ELEMENT
+    ### ✅ 5. FIND TIME ELEMENT
     print(f"🔍 Searching for time: {job['time']}")
     time_elements = driver.find_elements(By.XPATH, f"//span[contains(text(), '{job['time']}')]")
 
@@ -103,7 +75,7 @@ try:
     time_element = time_elements[0]  # Take the first matching element
     print("✅ Found time element!")
 
-    ### ✅ 7. FIND CLASS AT THE SPECIFIED TIME
+    ### ✅ 6. FIND CLASS AT THE SPECIFIED TIME
     print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
     section = time_element.find_element(By.XPATH, "./ancestor::section")
 
@@ -135,7 +107,7 @@ try:
         print("❌ Class not found at the specified time. Exiting...")
         exit()
 
-    ### ✅ 8. CONFIRM RESERVATION
+    ### ✅ 7. CONFIRM RESERVATION
     print("📌 Confirming reservation")
     time.sleep(3)
 
