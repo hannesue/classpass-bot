@@ -31,39 +31,58 @@ options.add_argument("--window-size=1920,1080")  # Ensures all elements are visi
 driver = webdriver.Remote(command_executor=SAUCE_URL, options=options)
 
 try:
-    # ✅ 1. LOGIN PROCESS
+    ### ✅ 1. LOGIN PROCESS
     print("🚀 Logging into ClassPass")
     driver.get("https://classpass.com/login")
-    time.sleep(5)  # Allow login page to load
+    time.sleep(3)  # Allow login page to load
 
     driver.find_element(By.ID, "email").send_keys(job["email"])
     driver.find_element(By.ID, "password").send_keys(job["password"])
     driver.find_element(By.ID, "password").send_keys(Keys.RETURN)
     print("✅ Login attempt submitted")
-    time.sleep(5)
 
-    # ✅ 2. CHECK IF LOGIN WAS SUCCESSFUL
-    if "dashboard" in driver.current_url:
-        print("✅ Successfully redirected to Dashboard!")
-    else:
-        print("❌ Login failed! Not redirected to dashboard.")
+    ### ✅ 2. WAIT FOR LOGIN TO COMPLETE
+    WebDriverWait(driver, 10).until(EC.url_contains("dashboard"))
+    print(f"✅ Redirected to Dashboard! Current URL: {driver.current_url}")
+
+    ### 🔴 DEBUG: PRINT WHAT PAGE WE ARE ON
+    time.sleep(3)  # Allow page to stabilize
+    print(f"🔍 After login, current page is: {driver.current_url}")
+
+    ### ❌ STOP IF DASHBOARD NOT REACHED
+    if "dashboard" not in driver.current_url:
+        print(f"❌ ERROR: Expected Dashboard but got {driver.current_url}")
         exit()
 
-    # ✅ 3. NAVIGATE TO STUDIO PAGE
+    ### ✅ 3. NAVIGATE TO STUDIO PAGE (FIX)
     print(f"🌍 Navigating to Studio: {job['studio_url']}")
     driver.get(job["studio_url"])
-    time.sleep(5)
+    time.sleep(5)  # Allow page to load
 
+    ### 🔴 DEBUG: PRINT PAGE AFTER NAVIGATION
+    print(f"🔍 After navigating to studio, current page is: {driver.current_url}")
+
+    ### ❌ STOP IF STUDIO PAGE NOT REACHED
     if job["studio_url"] not in driver.current_url:
-        print(f"❌ Failed to load Studio Page! Current URL: {driver.current_url}")
-        exit()
+        print(f"❌ ERROR: Expected {job['studio_url']} but got {driver.current_url}")
+        print("🔄 Retrying studio navigation...")
+        driver.get(job["studio_url"])  # Try again
+        time.sleep(5)
+        print(f"🔍 After retry, current page is: {driver.current_url}")
 
-    # ✅ 4. SCROLL DOWN SLIGHTLY
+        # Final check
+        if job["studio_url"] not in driver.current_url:
+            print("❌ Failed to reach studio page. Exiting...")
+            exit()
+
+    print("✅ Successfully loaded the studio page!")
+
+    ### ✅ 4. SCROLL DOWN SLIGHTLY
     driver.execute_script("window.scrollBy(0, 500);")  # Scroll to reveal schedule
     print("📜 Scrolling down slightly to reveal class schedule...")
     time.sleep(2)
 
-    # ✅ 5. FIND DATE
+    ### ✅ 5. FIND DATE
     print(f"📅 Searching for date: {job['date']}")
     while True:
         current_date = driver.find_element(By.XPATH, "//div[@data-qa='DateBar.date']").text.strip()
@@ -73,64 +92,54 @@ try:
         driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
         time.sleep(2)
 
-    # ✅ 6. FIND TIME ELEMENT FIRST
+    ### ✅ 6. FIND TIME ELEMENT
     print(f"🔍 Searching for time: {job['time']}")
-    try:
-        time_elements = driver.find_elements(By.XPATH, f"//span[contains(text(), '{job['time']}')]")
+    time_elements = driver.find_elements(By.XPATH, f"//span[contains(text(), '{job['time']}')]")
 
-        if not time_elements:
-            print(f"❌ No class found at {job['time']}. Exiting...")
-            exit()
-
-        time_element = time_elements[0]  # Take the first matching element
-        print("✅ Found time element!")
-
-    except NoSuchElementException:
-        print(f"❌ Time {job['time']} not found!")
+    if not time_elements:
+        print(f"❌ No class found at {job['time']}. Exiting...")
         exit()
 
-    # ✅ 7. FIND CLASS AT THE SPECIFIED TIME
+    time_element = time_elements[0]  # Take the first matching element
+    print("✅ Found time element!")
+
+    ### ✅ 7. FIND CLASS AT THE SPECIFIED TIME
     print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
-    try:
-        section = time_element.find_element(By.XPATH, "./ancestor::section")
+    section = time_element.find_element(By.XPATH, "./ancestor::section")
 
-        # **DEBUG: PRINT ENTIRE SECTION TEXT BEFORE CLICKING BUTTON**
-        print(f"🔍 Section text where time was found:\n{section.text}")
+    ### **DEBUG: PRINT ENTIRE SECTION TEXT BEFORE CLICKING BUTTON**
+    print(f"🔍 Section text where time was found:\n{section.text}")
 
-        # Verify if class name is in this section
-        class_elements = section.find_elements(By.XPATH, ".//span[contains(text(), '{}')]".format(job["class_name"]))
-        if class_elements:
-            print("✅ Class found at this time!")
+    ### ✅ Verify if class name is in this section
+    class_elements = section.find_elements(By.XPATH, ".//span[contains(text(), '{}')]".format(job["class_name"]))
+    if class_elements:
+        print("✅ Class found at this time!")
 
-            # ✅ Scroll to the correct section before clicking
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", section)
-            time.sleep(2)
+        ### ✅ Scroll to the correct section before clicking
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", section)
+        time.sleep(2)
 
-            # ✅ Find the booking button **strictly inside the correct section**
-            book_buttons = section.find_elements(By.XPATH, ".//button[contains(@data-qa, 'Schedule.cta')]")
+        ### ✅ Find the booking button **inside the correct section**
+        book_buttons = section.find_elements(By.XPATH, ".//button[contains(@data-qa, 'Schedule.cta')]")
 
-            if book_buttons:
-                book_button = book_buttons[0]  # Take the first button inside the section
-                print(f"📌 Booking Button found inside this section: {book_button.text}")
-                print("✅ Clicking the correct booking button now...")
-                book_button.click()
-                print("✅ Booking button clicked!")
-            else:
-                print("❌ No booking button found in this section!")
-
+        if book_buttons:
+            book_button = book_buttons[0]  # Take the first button inside the section
+            print(f"📌 Booking Button found inside this section: {book_button.text}")
+            print("✅ Clicking the correct booking button now...")
+            book_button.click()
+            print("✅ Booking button clicked!")
         else:
-            print("❌ Class not found at the specified time. Exiting...")
-            exit()
+            print("❌ No booking button found in this section!")
 
-    except NoSuchElementException:
-        print("❌ Could not find class booking button!")
+    else:
+        print("❌ Class not found at the specified time. Exiting...")
         exit()
 
-    # ✅ 8. CONFIRM RESERVATION
+    ### ✅ 8. CONFIRM RESERVATION
     print("📌 Confirming reservation")
     time.sleep(3)
 
-    # **Handle Different Confirmation Buttons**
+    ### **Handle Different Confirmation Buttons**
     try:
         confirm_button = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.XPATH, "//button[@data-qa='Inquiry.reserve-button']"))
@@ -145,12 +154,6 @@ try:
             print("✅ Booking confirmed (alternative method)!")
         except:
             print("❌ Booking confirmation failed!")
-
-    # ✅ 9. REMOVE COMPLETED JOB FROM jobs.json
-    jobs.remove(job)
-    with open("jobs.json", "w") as file:
-        json.dump(jobs, file, indent=4)
-    print("✅ Job removed from jobs.json")
 
     print("✅ Test Completed")
 
