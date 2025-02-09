@@ -4,9 +4,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 # Sauce Labs credentials
 SAUCE_USERNAME = "oauth-ueberschaergbr-dc0f3"
@@ -27,7 +27,7 @@ print(f"🚀 Booking {job['class_name']} at {job['studio']} on {job['date']} at 
 # Set up WebDriver for Sauce Labs **with High Resolution**
 options = webdriver.ChromeOptions()
 options.add_argument("--start-maximized")
-options.add_argument("--window-size=1920,1080")  # ✅ Ensures all elements are visible
+options.add_argument("--window-size=1920,1080")  # Ensures all elements are visible
 driver = webdriver.Remote(command_executor=SAUCE_URL, options=options)
 
 try:
@@ -60,7 +60,7 @@ try:
         exit()
 
     # ✅ 3. SCROLL DOWN SLIGHTLY
-    driver.execute_script("window.scrollBy(0, 500);")  # ✅ Scroll to reveal schedule
+    driver.execute_script("window.scrollBy(0, 500);")  # Scroll to reveal schedule
     print("📜 Scrolling down slightly to reveal class schedule...")
     time.sleep(2)
 
@@ -74,15 +74,15 @@ try:
         driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
         time.sleep(2)
 
-    # ✅ 5. FIND TIME ELEMENT FIRST
+    # ✅ 5. FIND TIME ELEMENT FIRST (STRICTLY WITHIN SECTION)
     print(f"🔍 Searching for time: {job['time']}")
     try:
         time_elements = driver.find_elements(By.XPATH, f"//span[contains(text(), '{job['time']}')]")
-        
+
         if not time_elements:
             print(f"❌ No class found at {job['time']}. Exiting...")
             exit()
-        
+
         time_element = time_elements[0]  # Take the first matching element
         print("✅ Found time element!")
 
@@ -100,10 +100,15 @@ try:
         if job["class_name"] in section.text:
             print("✅ Class found at this time!")
 
-            # ✅ Find the booking button within this section
-            book_button = section.find_element(By.XPATH, ".//button[@data-qa='Schedule.cta']")
+            # ✅ Scroll to the correct section before clicking
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", section)
+            time.sleep(2)
+
+            # ✅ Find the booking button **strictly inside the correct section**
+            book_button = section.find_element(By.XPATH, ".//button[contains(@data-qa, 'Schedule.cta')]")
+            print("📌 Clicking the correct booking button now...")
             book_button.click()
-            print("📌 Booking button clicked!")
+            print("✅ Booking button clicked!")
 
         else:
             print("❌ Class not found at the specified time. Exiting...")
