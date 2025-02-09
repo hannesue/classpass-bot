@@ -74,26 +74,38 @@ try:
         driver.find_element(By.XPATH, "//button[@aria-label='Next day']").click()
         time.sleep(2)
 
-    # ✅ 5. FIND CLASS AT THE SPECIFIC TIME
-    print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
-    
+    # ✅ 5. FIND TIME ELEMENT FIRST
+    print(f"🔍 Searching for time: {job['time']}")
     try:
-        # Find all available classes and match both name & time
-        classes = driver.find_elements(By.XPATH, "//section[@data-component='Section']")
-        class_found = False
-
-        for c in classes:
-            class_text = c.text  # Get all text inside class section
-            if job["class_name"] in class_text and job["time"] in class_text:
-                print(f"✅ Found class '{job['class_name']}' at {job['time']}")
-
-                # ✅ Find the exact booking button inside this section
-                book_button = c.find_element(By.XPATH, ".//button[@data-qa='Schedule.cta']")
-                book_button.click()
-                class_found = True
-                break
+        time_elements = driver.find_elements(By.XPATH, f"//span[contains(text(), '{job['time']}')]")
         
-        if not class_found:
+        if not time_elements:
+            print(f"❌ No class found at {job['time']}. Exiting...")
+            exit()
+        
+        time_element = time_elements[0]  # Take the first matching element
+        print("✅ Found time element!")
+
+    except NoSuchElementException:
+        print(f"❌ Time {job['time']} not found!")
+        exit()
+
+    # ✅ 6. FIND CLASS AT THE SPECIFIED TIME
+    print(f"🔍 Searching for class: {job['class_name']} at {job['time']}")
+    try:
+        # Get the parent section containing the time
+        section = time_element.find_element(By.XPATH, "./ancestor::section")
+
+        # Verify if class name is in this section
+        if job["class_name"] in section.text:
+            print("✅ Class found at this time!")
+
+            # ✅ Find the booking button within this section
+            book_button = section.find_element(By.XPATH, ".//button[@data-qa='Schedule.cta']")
+            book_button.click()
+            print("📌 Booking button clicked!")
+
+        else:
             print("❌ Class not found at the specified time. Exiting...")
             exit()
 
@@ -101,7 +113,7 @@ try:
         print("❌ Could not find class booking button!")
         exit()
 
-    # ✅ 6. CONFIRM RESERVATION
+    # ✅ 7. CONFIRM RESERVATION
     print("📌 Confirming reservation")
     time.sleep(3)  # Wait for confirmation screen to load
 
@@ -121,7 +133,7 @@ try:
         except:
             print("❌ Booking confirmation failed!")
 
-    # ✅ 7. REMOVE COMPLETED JOB FROM jobs.json
+    # ✅ 8. REMOVE COMPLETED JOB FROM jobs.json
     jobs.remove(job)
     with open("jobs.json", "w") as file:
         json.dump(jobs, file, indent=4)
